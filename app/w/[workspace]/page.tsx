@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { FilePanel } from "@/components/FilePanel";
 import { PreviewPanel } from "@/components/PreviewPanel";
+
+const CHAT_MIN_WIDTH = 200;
+const CHAT_DEFAULT_WIDTH = 400;
+const FILE_PANEL_WIDTH = 260;
+const PREVIEW_MIN_WIDTH = 300;
+const RESIZER_WIDTH = 4;
 
 export default function StudioPage() {
   const params = useParams<{ workspace: string }>();
@@ -17,6 +23,8 @@ export default function StudioPage() {
   const [openFiles, setOpenFiles] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("preview");
   const [fullscreen, setFullscreen] = useState(false);
+  const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT_WIDTH);
+  const resizingRef = useRef(false);
 
   const openFile = (path: string) => {
     setOpenFiles((prev) => (prev.includes(path) ? prev : [...prev, path]));
@@ -26,6 +34,25 @@ export default function StudioPage() {
     setOpenFiles((prev) => prev.filter((p) => p !== path));
     setActiveTab((cur) => (cur === path ? "preview" : cur));
   };
+
+  const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    (e.target as HTMLDivElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const onResizePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizingRef.current) return;
+    const desired = window.innerWidth - e.clientX;
+    const max =
+      window.innerWidth - FILE_PANEL_WIDTH - RESIZER_WIDTH - PREVIEW_MIN_WIDTH;
+    setChatWidth(Math.min(max, Math.max(CHAT_MIN_WIDTH, desired)));
+  }, []);
+
+  const onResizePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    resizingRef.current = false;
+    (e.target as HTMLDivElement).releasePointerCapture(e.pointerId);
+  }, []);
 
   return (
     <main className="flex h-screen flex-col">
@@ -56,9 +83,12 @@ export default function StudioPage() {
       </header>
 
       <div
-        className={`grid min-h-0 flex-1 ${
-          fullscreen ? "grid-cols-1" : "grid-cols-[260px_1fr_300px]"
-        }`}
+        className="grid min-h-0 flex-1"
+        style={{
+          gridTemplateColumns: fullscreen
+            ? "1fr"
+            : `${FILE_PANEL_WIDTH}px minmax(${PREVIEW_MIN_WIDTH}px, 1fr) ${RESIZER_WIDTH}px ${chatWidth}px`,
+        }}
       >
         {!fullscreen && (
           <div className="min-h-0 overflow-hidden border-r border-slate-800">
@@ -69,7 +99,7 @@ export default function StudioPage() {
             />
           </div>
         )}
-        <div className={`min-h-0 ${fullscreen ? "" : "border-r border-slate-800"}`}>
+        <div className="min-h-0">
           <PreviewPanel
             workspace={workspace}
             refreshKey={refreshKey}
@@ -81,12 +111,27 @@ export default function StudioPage() {
           />
         </div>
         {!fullscreen && (
-          <div className="min-h-0 overflow-hidden">
-            <ChatPanel
-              workspace={workspace}
-              onTurnComplete={() => setRefreshKey((k) => k + 1)}
-            />
-          </div>
+          <>
+            <div
+              role="separator"
+              aria-orientation="vertical"
+              aria-label="Resize chat panel"
+              onPointerDown={onResizePointerDown}
+              onPointerMove={onResizePointerMove}
+              onPointerUp={onResizePointerUp}
+              onPointerCancel={onResizePointerUp}
+              onDoubleClick={() => setChatWidth(CHAT_DEFAULT_WIDTH)}
+              className="group relative cursor-col-resize touch-none select-none border-l border-slate-800 bg-slate-800 transition-colors hover:bg-indigo-500/60"
+            >
+              <span className="absolute inset-y-0 -left-1 -right-1" />
+            </div>
+            <div className="min-h-0 overflow-hidden">
+              <ChatPanel
+                workspace={workspace}
+                onTurnComplete={() => setRefreshKey((k) => k + 1)}
+              />
+            </div>
+          </>
         )}
       </div>
     </main>

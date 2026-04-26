@@ -284,7 +284,7 @@ export function ChatPanel({ workspace, onTurnComplete }: Props) {
   return (
     <div className="flex h-full flex-col bg-slate-900/40">
       <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-2 text-sm text-slate-400">
-        <span>Chat {workspace ? `· ${workspace}` : ""}</span>
+        <span>Chat</span>
         {busy && (
           <span className="ml-auto flex items-center gap-2 text-xs text-indigo-300">
             <span className="relative flex h-2 w-2">
@@ -309,12 +309,6 @@ export function ChatPanel({ workspace, onTurnComplete }: Props) {
         ref={scrollerRef}
         className="flex-1 space-y-3 overflow-y-auto px-4 py-3"
       >
-        {messages.length === 0 && workspace && (
-          <p className="text-sm text-slate-500">
-            Ask Claude to build something. Files land in{" "}
-            <code className="text-slate-300">workspaces/{workspace}/</code>.
-          </p>
-        )}
         {!workspace && (
           <p className="text-sm text-slate-500">
             Select or create a workspace to start chatting.
