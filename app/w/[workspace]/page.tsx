@@ -6,7 +6,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ElementEditorPanel } from "@/components/ElementEditorPanel";
 import { FilePanel } from "@/components/FilePanel";
-import { PreviewPanel } from "@/components/PreviewPanel";
+import { PreviewPanel, type BriefTab } from "@/components/PreviewPanel";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
 import type { SelectedElement } from "@/lib/previewInspector";
 import { useChat } from "@/lib/useChat";
 
@@ -33,6 +35,7 @@ export default function StudioPage() {
   const [selectedElement, setSelectedElement] =
     useState<SelectedElement | null>(null);
   const [liveOverrides, setLiveOverrides] = useState<Record<string, string>>({});
+  const [brief, setBrief] = useState<BriefTab | null>(null);
 
   const chat = useChat({
     workspace,
@@ -45,6 +48,7 @@ export default function StudioPage() {
     setInspectMode(false);
     setSelectedElement(null);
     setLiveOverrides({});
+    setBrief(null);
   }, [workspace]);
 
   // Crosshair only makes sense while the Preview tab is visible.
@@ -72,6 +76,24 @@ export default function StudioPage() {
     setActiveTab((cur) => (cur === path ? "preview" : cur));
   };
 
+  const openBrief = useCallback(
+    (id: string, questions: ClarifyingQuestion[]) => {
+      setBrief({ id, questions });
+      setActiveTab("brief");
+    },
+    [],
+  );
+  const closeBrief = useCallback(() => {
+    setBrief(null);
+    setActiveTab((cur) => (cur === "brief" ? "preview" : cur));
+  }, []);
+  const submitBrief = useCallback(
+    (text: string) => {
+      void chat.send(text);
+    },
+    [chat],
+  );
+
   const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     resizingRef.current = true;
@@ -93,10 +115,10 @@ export default function StudioPage() {
 
   return (
     <main className="flex h-screen flex-col">
-      <header className="flex items-center gap-3 border-b border-slate-800 bg-slate-950 px-4 py-2">
+      <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-950">
         <Link
           href="/"
-          className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+          className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           ← Workspaces
         </Link>
@@ -106,20 +128,23 @@ export default function StudioPage() {
             router.replace(`/w/${encodeURIComponent(next)}`)
           }
         />
-        <button
-          type="button"
-          onClick={() => {
-            setFullscreen((v) => {
-              if (!v) setActiveTab("preview");
-              return !v;
-            });
-          }}
-          aria-label={fullscreen ? "Exit fullscreen preview" : "Fullscreen preview"}
-          title={fullscreen ? "Exit fullscreen preview" : "Fullscreen preview"}
-          className="ml-auto rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
-        >
-          {fullscreen ? "Exit fullscreen" : "Fullscreen"}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={() => {
+              setFullscreen((v) => {
+                if (!v) setActiveTab("preview");
+                return !v;
+              });
+            }}
+            aria-label={fullscreen ? "Exit fullscreen preview" : "Fullscreen preview"}
+            title={fullscreen ? "Exit fullscreen preview" : "Fullscreen preview"}
+            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          >
+            {fullscreen ? "Exit fullscreen" : "Fullscreen"}
+          </button>
+        </div>
       </header>
 
       <div
@@ -131,7 +156,7 @@ export default function StudioPage() {
         }}
       >
         {!fullscreen && (
-          <div className="min-h-0 overflow-hidden border-r border-slate-800">
+          <div className="min-h-0 overflow-hidden border-r border-slate-200 dark:border-slate-800">
             <FilePanel
               workspace={workspace}
               refreshKey={refreshKey}
@@ -153,6 +178,9 @@ export default function StudioPage() {
             onElementSelect={handleElementSelect}
             liveSelector={selectedElement?.selector ?? null}
             liveOverrides={liveOverrides}
+            brief={brief}
+            onCloseBrief={closeBrief}
+            onSubmitBrief={submitBrief}
           />
         </div>
         {!fullscreen && (
@@ -166,7 +194,7 @@ export default function StudioPage() {
               onPointerUp={onResizePointerUp}
               onPointerCancel={onResizePointerUp}
               onDoubleClick={() => setChatWidth(CHAT_DEFAULT_WIDTH)}
-              className="group relative cursor-col-resize touch-none select-none border-l border-slate-800 bg-slate-800 transition-colors hover:bg-indigo-500/60"
+              className="group relative cursor-col-resize touch-none select-none border-l border-slate-200 bg-slate-200 transition-colors hover:bg-indigo-500/60 dark:border-slate-800 dark:bg-slate-800"
             >
               <span className="absolute inset-y-0 -left-1 -right-1" />
             </div>
@@ -186,6 +214,7 @@ export default function StudioPage() {
                   chat={chat}
                   selectedElement={null}
                   onClearSelection={clearSelection}
+                  onOpenBrief={openBrief}
                 />
               )}
             </div>
@@ -214,7 +243,7 @@ function WorkspaceTitle({
   }, [editing]);
 
   if (!workspace) {
-    return <h1 className="text-sm font-semibold text-slate-100">—</h1>;
+    return <h1 className="text-sm font-semibold text-slate-900 dark:text-slate-100">—</h1>;
   }
 
   const startEdit = () => {
@@ -268,7 +297,7 @@ function WorkspaceTitle({
         type="button"
         onClick={startEdit}
         title="Rename workspace"
-        className="rounded px-1 text-sm font-semibold text-slate-100 hover:bg-slate-800"
+        className="rounded px-1 text-sm font-semibold text-slate-900 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
       >
         {workspace}
       </button>
@@ -295,7 +324,7 @@ function WorkspaceTitle({
         }}
         disabled={saving}
         autoFocus
-        className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-sm font-semibold text-slate-100 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+        className="rounded border border-slate-300 bg-white px-2 py-0.5 text-sm font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       />
       <button
         type="submit"
@@ -308,11 +337,11 @@ function WorkspaceTitle({
         type="button"
         onClick={cancel}
         disabled={saving}
-        className="rounded border border-slate-700 px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+        className="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
       >
         Cancel
       </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {error && <span className="text-xs text-red-500 dark:text-red-400">{error}</span>}
     </form>
   );
 }

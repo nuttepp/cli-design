@@ -92,8 +92,8 @@ function FileTree({
         onDoubleClick={() => onOpen?.(node.path)}
         className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs ${
           selected === node.path
-            ? "bg-indigo-600/30 text-indigo-100"
-            : "text-slate-300 hover:bg-slate-800/60"
+            ? "bg-indigo-500/20 text-indigo-700 dark:bg-indigo-600/30 dark:text-indigo-100"
+            : "text-slate-700 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800/60"
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
@@ -126,7 +126,7 @@ function FileTree({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-xs text-slate-400 hover:bg-slate-800/60"
+        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-xs text-slate-600 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/60"
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
       >
         <span className="w-3 text-center">{open ? "▾" : "▸"}</span>
@@ -187,8 +187,8 @@ export function FilePanel({ workspace, refreshKey, onOpenFile }: Props) {
   const fileCount = files ? Object.keys(files).length : 0;
 
   return (
-    <div className="flex h-full flex-col bg-slate-950/60">
-      <div className="flex items-center gap-2 border-b border-slate-800 px-3 py-2 text-sm text-slate-400">
+    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-950/60">
+      <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
         <span>Files</span>
         {workspace && (
           <span className="ml-auto text-xs text-slate-500">
@@ -200,7 +200,7 @@ export function FilePanel({ workspace, refreshKey, onOpenFile }: Props) {
       {!workspace ? (
         <div className="p-3 text-xs text-slate-500">No workspace selected.</div>
       ) : error ? (
-        <div className="p-3 text-xs text-red-400">{error}</div>
+        <div className="p-3 text-xs text-red-500 dark:text-red-400">{error}</div>
       ) : !tree ? (
         <div className="p-3 text-xs text-slate-500">Loading…</div>
       ) : (

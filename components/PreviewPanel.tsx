@@ -14,11 +14,18 @@ import {
   useState,
 } from "react";
 import { DesignSystem } from "./DesignSystem";
+import { QuestionsForm } from "./QuestionsForm";
+import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
 import {
   INSPECTOR_MARKER,
   injectInspectorScript,
   type SelectedElement,
 } from "@/lib/previewInspector";
+
+export interface BriefTab {
+  id: string;
+  questions: ClarifyingQuestion[];
+}
 
 interface Props {
   workspace: string | null;
@@ -33,6 +40,9 @@ interface Props {
   onElementSelect: (sel: SelectedElement) => void;
   liveSelector: string | null;
   liveOverrides: Record<string, string>;
+  brief?: BriefTab | null;
+  onCloseBrief?: () => void;
+  onSubmitBrief?: (text: string) => void;
 }
 
 const SAVE_DEBOUNCE_MS = 5000;
@@ -65,6 +75,9 @@ export function PreviewPanel({
   onElementSelect,
   liveSelector,
   liveOverrides,
+  brief = null,
+  onCloseBrief,
+  onSubmitBrief,
 }: Props) {
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [files, setFiles] = useState<Record<string, string> | null>(null);
@@ -250,21 +263,21 @@ export function PreviewPanel({
 
   if (!workspace) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+      <div className="flex h-full items-center justify-center bg-white text-sm text-slate-500 dark:bg-slate-950">
         No workspace selected.
       </div>
     );
   }
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center p-4 text-sm text-red-400">
+      <div className="flex h-full items-center justify-center bg-white p-4 text-sm text-red-500 dark:bg-slate-950 dark:text-red-400">
         Failed to load workspace files: {error}
       </div>
     );
   }
   if (!files || !sandpackFiles) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+      <div className="flex h-full items-center justify-center bg-white text-sm text-slate-500 dark:bg-slate-950">
         Loading…
       </div>
     );
@@ -273,7 +286,7 @@ export function PreviewPanel({
   return (
     <div className="flex h-full flex-col">
       {!hideTabs && (
-        <div className="flex items-end gap-1 overflow-x-auto border-b border-slate-800 bg-slate-950 px-2 pt-2">
+        <div className="flex items-end gap-1 overflow-x-auto border-b border-slate-200 bg-white px-2 pt-2 dark:border-slate-800 dark:bg-slate-950">
           <ChromeTab
             active={activeTab === "preview"}
             onClick={() => onSelectTab("preview")}
@@ -288,6 +301,17 @@ export function PreviewPanel({
             <span className="text-indigo-400">●</span>
             <span>Design System</span>
           </ChromeTab>
+          {brief && (
+            <ChromeTab
+              active={activeTab === "brief"}
+              onClick={() => onSelectTab("brief")}
+              onClose={onCloseBrief}
+              title="Project brief"
+            >
+              <span className="text-amber-400">●</span>
+              <span>Brief</span>
+            </ChromeTab>
+          )}
           {openFiles.map((path) => {
             const name = path.slice(path.lastIndexOf("/") + 1);
             return (
@@ -317,7 +341,7 @@ export function PreviewPanel({
                 className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition ${
                   inspectMode
                     ? "border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-500"
-                    : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                 }`}
               >
                 <svg
@@ -340,7 +364,7 @@ export function PreviewPanel({
         </div>
       )}
 
-      <div ref={previewContainerRef} className="relative min-h-0 flex-1 bg-white">
+      <div ref={previewContainerRef} className="relative min-h-0 flex-1 bg-white dark:bg-slate-950">
         <div
           className="absolute inset-0"
           style={{ display: activeTab === "preview" ? "block" : "none" }}
@@ -370,6 +394,23 @@ export function PreviewPanel({
           <DesignSystem />
         </div>
 
+        {brief && (
+          <div
+            className="absolute inset-0 overflow-hidden bg-white dark:bg-slate-950"
+            style={{ display: activeTab === "brief" ? "block" : "none" }}
+          >
+            <QuestionsForm
+              key={brief.id}
+              questions={brief.questions}
+              variant="tab"
+              onSubmit={(text) => {
+                onSubmitBrief?.(text);
+                onCloseBrief?.();
+              }}
+            />
+          </div>
+        )}
+
         {openFiles.map((path) => {
           const content = edits[path] ?? files[path] ?? "";
           return (
@@ -378,7 +419,7 @@ export function PreviewPanel({
               value={content}
               onChange={(e) => handleEdit(path, e.target.value)}
               spellCheck={false}
-              className="absolute inset-0 h-full w-full resize-none bg-slate-950 p-3 font-mono text-[12px] leading-snug text-slate-100 focus:outline-none"
+              className="absolute inset-0 h-full w-full resize-none bg-white p-3 font-mono text-[12px] leading-snug text-slate-900 focus:outline-none dark:bg-slate-950 dark:text-slate-100"
               style={{ display: activeTab === path ? "block" : "none" }}
             />
           );
@@ -406,8 +447,8 @@ function ChromeTab({
       title={title}
       className={`group flex shrink-0 items-center gap-2 rounded-t-md border border-b-0 px-3 py-1.5 text-xs ${
         active
-          ? "border-slate-800 bg-slate-900 text-slate-100"
-          : "border-transparent bg-slate-900/40 text-slate-400 hover:bg-slate-900/70"
+          ? "border-slate-200 bg-slate-100 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+          : "border-transparent bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-900/40 dark:text-slate-400 dark:hover:bg-slate-900/70"
       }`}
     >
       <button
@@ -425,7 +466,7 @@ function ChromeTab({
             onClose();
           }}
           aria-label="Close tab"
-          className="rounded px-1 text-slate-500 opacity-60 hover:bg-slate-800 hover:text-slate-200 group-hover:opacity-100"
+          className="rounded px-1 text-slate-500 opacity-60 hover:bg-slate-200 hover:text-slate-700 group-hover:opacity-100 dark:hover:bg-slate-800 dark:hover:text-slate-200"
         >
           ×
         </button>

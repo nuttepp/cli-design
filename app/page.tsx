@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function HomePage() {
   const router = useRouter();
@@ -61,16 +62,17 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="flex items-center justify-between border-b border-slate-800 px-6 py-3">
+    <main className="min-h-screen bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <header className="flex items-center justify-between border-b border-slate-200 px-6 py-3 dark:border-slate-800">
         <h1 className="text-sm font-semibold">Claude Code Studio</h1>
+        <ThemeToggle />
       </header>
 
       <section className="mx-auto max-w-3xl px-6 py-12">
         <h2 className="text-2xl font-semibold">Pick a workspace</h2>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
           Each workspace is a folder of plain HTML / CSS / JS in{" "}
-          <code className="text-slate-300">./workspaces/&lt;name&gt;/</code>.
+          <code className="text-slate-700 dark:text-slate-300">./workspaces/&lt;name&gt;/</code>.
         </p>
 
         <form onSubmit={create} className="mt-6 flex gap-2">
@@ -80,7 +82,7 @@ export default function HomePage() {
             placeholder="my-app"
             pattern="[a-z0-9][a-z0-9-]{0,39}"
             title="lowercase letters, digits and dashes; max 40 chars"
-            className="flex-1 rounded-md border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           <button
             type="submit"
@@ -90,7 +92,7 @@ export default function HomePage() {
             {creating ? "Creating…" : "+ New workspace"}
           </button>
         </form>
-        {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+        {error && <p className="mt-2 text-xs text-red-500 dark:text-red-400">{error}</p>}
 
         <h3 className="mt-10 text-xs font-semibold uppercase tracking-wider text-slate-500">
           Existing
@@ -107,16 +109,16 @@ export default function HomePage() {
               <li key={name} className="group relative">
                 <Link
                   href={`/w/${encodeURIComponent(name)}`}
-                  className="block rounded-md border border-slate-800 bg-slate-900/60 px-4 py-3 text-sm hover:border-indigo-500/50 hover:bg-slate-900"
+                  className="block rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm hover:border-indigo-500/50 hover:bg-white dark:border-slate-800 dark:bg-slate-900/60 dark:hover:bg-slate-900"
                 >
-                  <span className="text-slate-100">{name}</span>
+                  <span className="text-slate-900 dark:text-slate-100">{name}</span>
                   <span className="ml-2 text-xs text-slate-500">→</span>
                 </Link>
                 <button
                   type="button"
                   onClick={() => void remove(name)}
                   aria-label={`Delete ${name}`}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-red-500/30 px-2 py-0.5 text-[10px] text-red-300 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded border border-red-500/30 px-2 py-0.5 text-[10px] text-red-500 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 dark:text-red-300"
                 >
                   Delete
                 </button>

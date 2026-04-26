@@ -17,7 +17,57 @@ interface ChatRequest {
   message: string;
   resetSession?: boolean;
   selectedElement?: SelectedElement | null;
+  firstTurn?: boolean;
 }
+
+const FIRST_TURN_DIRECTIVE = `
+
+<project_kickoff>
+This is the user's FIRST message for a brand-new project. Before writing or
+modifying any files, ask 3-6 clarifying questions to scope the work:
+purpose / goal of the site, target audience and tone, required pages or
+features, and any visual-style preferences. Tailor the specific questions
+to what the user just said.
+
+Output the questions inside a fenced code block with the language tag
+"questions" containing a JSON array of objects shaped:
+  {
+    "id": string,
+    "question": string,
+    "type": "text" | "single" | "multi",   // optional, default "text"
+    "options": string[]                    // required when type is single/multi
+  }
+
+Pick the type that fits each question:
+- "single" (radio) — pick one from a short list of likely answers.
+- "multi"  (checkbox) — pick any combination from a list of features/options.
+- "text"   — open-ended; no options needed.
+You do NOT need to add an "Other" option — the UI always shows an "Other"
+free-text field automatically.
+
+After the block, you may add a one-sentence note, but DO NOT create or edit
+files in this turn — wait for the user's answers.
+
+Example:
+\`\`\`questions
+[
+  {"id": "purpose", "question": "What is this website for?"},
+  {
+    "id": "audience",
+    "question": "Who is the primary audience?",
+    "type": "single",
+    "options": ["Consumers", "Businesses", "Internal team", "Developers"]
+  },
+  {
+    "id": "features",
+    "question": "Which features should it have?",
+    "type": "multi",
+    "options": ["Landing page", "Blog", "Contact form", "Pricing", "Auth"]
+  }
+]
+\`\`\`
+</project_kickoff>
+`;
 
 function isValidSelectedElement(v: unknown): v is SelectedElement {
   if (!v || typeof v !== "object") return false;
@@ -59,9 +109,12 @@ export async function POST(req: Request) {
     );
   }
 
-  const finalMessage = body.selectedElement
+  let finalMessage = body.selectedElement
     ? formatSelectedElement(body.selectedElement, body.message)
     : body.message;
+  if (body.firstTurn) {
+    finalMessage = `${finalMessage}${FIRST_TURN_DIRECTIVE}`;
+  }
 
   let cwd: string;
   try {

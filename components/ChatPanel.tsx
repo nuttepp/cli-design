@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { MessageView, type ChatMessage } from "./Message";
 import type { UseChatResult } from "@/lib/useChat";
 import type { SelectedElement } from "@/lib/previewInspector";
+import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
 
 interface Props {
   workspace: string | null;
   chat: UseChatResult;
   selectedElement: SelectedElement | null;
   onClearSelection: () => void;
+  onOpenBrief?: (messageId: string, questions: ClarifyingQuestion[]) => void;
 }
 
 export function ChatPanel({
@@ -17,6 +19,7 @@ export function ChatPanel({
   chat,
   selectedElement,
   onClearSelection,
+  onOpenBrief,
 }: Props) {
   const [input, setInput] = useState("");
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -46,11 +49,11 @@ export function ChatPanel({
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-900/40">
-      <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-2 text-sm text-slate-400">
+    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900/40">
+      <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
         <span>Chat</span>
         {busy && (
-          <span className="ml-auto flex items-center gap-2 text-xs text-indigo-300">
+          <span className="ml-auto flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-300">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
@@ -62,7 +65,7 @@ export function ChatPanel({
             <button
               type="button"
               onClick={stop}
-              className="rounded border border-slate-700 px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-800"
+              className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Stop
             </button>
@@ -79,11 +82,16 @@ export function ChatPanel({
           </p>
         )}
         {messages.map((m: ChatMessage) => (
-          <MessageView key={m.id} message={m} />
+          <MessageView
+            key={m.id}
+            message={m}
+            onAnswerQuestions={(text) => void send(text)}
+            onOpenBrief={onOpenBrief}
+          />
         ))}
       </div>
       <form
-        className="border-t border-slate-800 p-3"
+        className="border-t border-slate-200 p-3 dark:border-slate-800"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
@@ -95,7 +103,7 @@ export function ChatPanel({
             onClear={onClearSelection}
           />
         )}
-        <div className="relative rounded-md bg-slate-900/60">
+        <div className="relative rounded-md bg-slate-100 dark:bg-slate-900/60">
           <textarea
             ref={textareaRef}
             value={input}
@@ -115,7 +123,7 @@ export function ChatPanel({
             }
             disabled={!workspace || busy}
             rows={1}
-            className="block max-h-[200px] w-full resize-none overflow-y-auto rounded-md bg-transparent px-3 py-1.5 pr-12 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
+            className="block max-h-[200px] w-full resize-none overflow-y-auto rounded-md bg-transparent px-3 py-1.5 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           <button
             type="submit"

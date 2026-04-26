@@ -51,6 +51,10 @@ function newId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
+function chatHistoryKey(workspace: string): string {
+  return `chat-history:${workspace}`;
+}
+
 function toolResultText(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
@@ -93,11 +97,44 @@ export function useChat({
     return () => window.clearInterval(id);
   }, [busy]);
 
-  // Reset transcript on workspace change. The server-side session is also
-  // keyed per-workspace, so this just resets the visible view.
+  // Load persisted transcript whenever the workspace changes. We snapshot
+  // messages to localStorage on every change below, so reopening the same
+  // workspace restores the visible chat history. Pending state is dropped
+  // on rehydrate (no in-flight request can be resumed across reloads).
   useEffect(() => {
-    setMessages([]);
+    if (!workspace) {
+      setMessages([]);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(chatHistoryKey(workspace));
+      if (!raw) {
+        setMessages([]);
+        return;
+      }
+      const parsed = JSON.parse(raw) as ChatMessage[];
+      if (Array.isArray(parsed)) {
+        setMessages(parsed.map((m) => ({ ...m, pending: false })));
+      } else {
+        setMessages([]);
+      }
+    } catch {
+      setMessages([]);
+    }
   }, [workspace]);
+
+  // Persist transcript on every change.
+  useEffect(() => {
+    if (!workspace) return;
+    try {
+      localStorage.setItem(
+        chatHistoryKey(workspace),
+        JSON.stringify(messages),
+      );
+    } catch {
+      // ignore quota errors
+    }
+  }, [messages, workspace]);
 
   const updateAssistant = useCallback(
     (assistantId: string, mut: (m: ChatMessage) => ChatMessage) => {
@@ -115,6 +152,7 @@ export function useChat({
 
       const sentSelection = opts?.selectedElement ?? null;
       const styleOverrides = opts?.styleOverrides ?? null;
+      const firstTurn = messages.length === 0;
 
       let userText = trimmed;
       if (styleOverrides && Object.keys(styleOverrides).length > 0) {
@@ -156,6 +194,7 @@ export function useChat({
             workspace,
             message: userText,
             selectedElement: sentSelection,
+            firstTurn,
           }),
           signal: ac.signal,
         });
@@ -292,7 +331,7 @@ export function useChat({
         }
       }
     },
-    [busy, onTurnComplete, updateAssistant, workspace],
+    [busy, messages.length, onTurnComplete, updateAssistant, workspace],
   );
 
   const stop = useCallback(() => abortRef.current?.abort(), []);

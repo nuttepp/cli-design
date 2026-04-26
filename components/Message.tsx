@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import {
+  parseClarifyingQuestions,
+  type ClarifyingQuestion,
+} from "@/lib/clarifyingQuestions";
+import { QuestionsForm } from "./QuestionsForm";
 
 export type ChatRole = "user" | "assistant";
 
@@ -120,17 +125,39 @@ function ThinkingBlock({
   );
 }
 
-export function MessageView({ message }: { message: ChatMessage }) {
+interface MessageViewProps {
+  message: ChatMessage;
+  onAnswerQuestions?: (text: string) => void;
+  onOpenBrief?: (
+    messageId: string,
+    questions: ClarifyingQuestion[],
+  ) => void;
+}
+
+const INLINE_QUESTION_LIMIT = 2;
+
+export function MessageView({
+  message,
+  onAnswerQuestions,
+  onOpenBrief,
+}: MessageViewProps) {
   const isUser = message.role === "user";
   const hasActivity =
     Boolean(message.thinking) || message.toolCalls.length > 0;
+
+  const parsed =
+    !isUser && !message.pending
+      ? parseClarifyingQuestions(message.text)
+      : null;
+  const visibleText = parsed ? parsed.cleanText : message.text;
+
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
         className={`max-w-[90%] space-y-2 rounded-lg px-3 py-2 text-sm ${
           isUser
             ? "bg-indigo-600 text-white"
-            : "bg-slate-800/60 text-slate-100"
+            : "bg-slate-100 text-slate-900 dark:bg-slate-800/60 dark:text-slate-100"
         }`}
       >
         {!isUser && hasActivity && (
@@ -140,13 +167,29 @@ export function MessageView({ message }: { message: ChatMessage }) {
             active={Boolean(message.pending)}
           />
         )}
-        {message.text && (
+        {visibleText && (
           <div className="whitespace-pre-wrap leading-relaxed">
-            {message.text}
+            {visibleText}
             {message.pending && (
               <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-current align-middle" />
             )}
           </div>
+        )}
+        {parsed && onAnswerQuestions && (
+          parsed.questions.length <= INLINE_QUESTION_LIMIT ? (
+            <QuestionsForm
+              questions={parsed.questions}
+              onSubmit={onAnswerQuestions}
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => onOpenBrief?.(message.id, parsed.questions)}
+              className="inline-flex items-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-200 hover:bg-indigo-500/20"
+            >
+              Open brief ({parsed.questions.length} questions) →
+            </button>
+          )
         )}
       </div>
     </div>
@@ -178,8 +221,8 @@ function ActivityLog({
     <div
       className={`rounded-md border px-3 py-2 text-xs ${
         errored
-          ? "border-red-500/30 bg-red-500/5 text-red-100"
-          : "border-slate-700 bg-slate-900/40 text-slate-200"
+          ? "border-red-500/30 bg-red-500/5 text-red-700 dark:text-red-100"
+          : "border-slate-200 bg-white/60 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200"
       }`}
     >
       <button
