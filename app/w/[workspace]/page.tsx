@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
+import { ElementEditorPanel } from "@/components/ElementEditorPanel";
 import { FilePanel } from "@/components/FilePanel";
 import { PreviewPanel } from "@/components/PreviewPanel";
+import type { SelectedElement } from "@/lib/previewInspector";
+import { useChat } from "@/lib/useChat";
 
 const CHAT_MIN_WIDTH = 200;
 const CHAT_DEFAULT_WIDTH = 400;
@@ -25,6 +28,39 @@ export default function StudioPage() {
   const [fullscreen, setFullscreen] = useState(false);
   const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT_WIDTH);
   const resizingRef = useRef(false);
+  const [inspectMode, setInspectMode] = useState(false);
+  const [selectedElement, setSelectedElement] =
+    useState<SelectedElement | null>(null);
+  const [liveOverrides, setLiveOverrides] = useState<Record<string, string>>({});
+
+  const chat = useChat({
+    workspace,
+    onTurnComplete: () => setRefreshKey((k) => k + 1),
+  });
+
+  // Reset inspector state when the workspace changes; keep selection
+  // scoped to the workspace it was captured in.
+  useEffect(() => {
+    setInspectMode(false);
+    setSelectedElement(null);
+    setLiveOverrides({});
+  }, [workspace]);
+
+  // Crosshair only makes sense while the Preview tab is visible.
+  useEffect(() => {
+    if (activeTab !== "preview" && inspectMode) setInspectMode(false);
+  }, [activeTab, inspectMode]);
+
+  // A fresh selection always starts with no overrides.
+  const handleElementSelect = useCallback((sel: SelectedElement) => {
+    setSelectedElement(sel);
+    setLiveOverrides({});
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedElement(null);
+    setLiveOverrides({});
+  }, []);
 
   const openFile = (path: string) => {
     setOpenFiles((prev) => (prev.includes(path) ? prev : [...prev, path]));
@@ -108,6 +144,11 @@ export default function StudioPage() {
             onSelectTab={setActiveTab}
             onCloseFile={closeFile}
             hideTabs={fullscreen}
+            inspectMode={inspectMode}
+            onInspectToggle={setInspectMode}
+            onElementSelect={handleElementSelect}
+            liveSelector={selectedElement?.selector ?? null}
+            liveOverrides={liveOverrides}
           />
         </div>
         {!fullscreen && (
@@ -126,10 +167,23 @@ export default function StudioPage() {
               <span className="absolute inset-y-0 -left-1 -right-1" />
             </div>
             <div className="min-h-0 overflow-hidden">
-              <ChatPanel
-                workspace={workspace}
-                onTurnComplete={() => setRefreshKey((k) => k + 1)}
-              />
+              {selectedElement ? (
+                <ElementEditorPanel
+                  workspace={workspace}
+                  element={selectedElement}
+                  overrides={liveOverrides}
+                  onOverrideChange={setLiveOverrides}
+                  onClose={clearSelection}
+                  chat={chat}
+                />
+              ) : (
+                <ChatPanel
+                  workspace={workspace}
+                  chat={chat}
+                  selectedElement={null}
+                  onClearSelection={clearSelection}
+                />
+              )}
             </div>
           </>
         )}

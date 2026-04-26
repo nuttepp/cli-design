@@ -1,5 +1,7 @@
 import { spawnClaude, type ClaudeEvent } from "@/lib/claude";
+import { formatSelectedElement } from "@/lib/inspectorContext";
 import { getSession, setSession } from "@/lib/sessionStore";
+import type { SelectedElement } from "@/lib/previewInspector";
 import {
   workspacePath,
   WorkspaceError,
@@ -14,6 +16,19 @@ interface ChatRequest {
   workspace: string;
   message: string;
   resetSession?: boolean;
+  selectedElement?: SelectedElement | null;
+}
+
+function isValidSelectedElement(v: unknown): v is SelectedElement {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Record<string, unknown>;
+  return (
+    typeof o.selector === "string" &&
+    typeof o.tag === "string" &&
+    typeof o.html === "string" &&
+    typeof o.css === "object" &&
+    o.css !== null
+  );
 }
 
 export async function POST(req: Request) {
@@ -33,6 +48,20 @@ export async function POST(req: Request) {
       { status: 400, headers: { "content-type": "application/json" } },
     );
   }
+
+  if (
+    body.selectedElement != null &&
+    !isValidSelectedElement(body.selectedElement)
+  ) {
+    return new Response(
+      JSON.stringify({ error: "selectedElement is malformed" }),
+      { status: 400, headers: { "content-type": "application/json" } },
+    );
+  }
+
+  const finalMessage = body.selectedElement
+    ? formatSelectedElement(body.selectedElement, body.message)
+    : body.message;
 
   let cwd: string;
   try {
@@ -66,7 +95,7 @@ export async function POST(req: Request) {
       try {
         for await (const evt of spawnClaude({
           cwd,
-          message: body.message,
+          message: finalMessage,
           sessionId,
           signal: ac.signal,
         })) {

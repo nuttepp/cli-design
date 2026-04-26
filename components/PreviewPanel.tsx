@@ -14,6 +14,11 @@ import {
   useState,
 } from "react";
 import { DesignSystem } from "./DesignSystem";
+import {
+  INSPECTOR_MARKER,
+  injectInspectorScript,
+  type SelectedElement,
+} from "@/lib/previewInspector";
 
 interface Props {
   workspace: string | null;
@@ -23,6 +28,11 @@ interface Props {
   onSelectTab: (tab: string) => void;
   onCloseFile: (path: string) => void;
   hideTabs?: boolean;
+  inspectMode: boolean;
+  onInspectToggle: (on: boolean) => void;
+  onElementSelect: (sel: SelectedElement) => void;
+  liveSelector: string | null;
+  liveOverrides: Record<string, string>;
 }
 
 const SAVE_DEBOUNCE_MS = 5000;
@@ -50,7 +60,13 @@ export function PreviewPanel({
   onSelectTab,
   onCloseFile,
   hideTabs = false,
+  inspectMode,
+  onInspectToggle,
+  onElementSelect,
+  liveSelector,
+  liveOverrides,
 }: Props) {
+  const previewContainerRef = useRef<HTMLDivElement>(null);
   const [files, setFiles] = useState<Record<string, string> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -146,12 +162,91 @@ export function PreviewPanel({
     onCloseFile(path);
   };
 
+  const postToIframe = useCallback((msg: Record<string, unknown>) => {
+    const iframe = previewContainerRef.current?.querySelector("iframe");
+    iframe?.contentWindow?.postMessage(msg, "*");
+  }, []);
+
+  // Sync inspect mode into the Sandpack iframe via postMessage. Also tear
+  // down on unmount so a stale crosshair never sticks around.
+  useEffect(() => {
+    postToIframe({
+      [INSPECTOR_MARKER]: true,
+      type: inspectMode ? "activate" : "deactivate",
+    });
+    return () => {
+      postToIframe({ [INSPECTOR_MARKER]: true, type: "deactivate" });
+    };
+  }, [inspectMode, postToIframe, refreshKey]);
+
+  // Stream live style overrides from the Element Editor into the iframe so
+  // form changes update the preview without re-saving the source. The
+  // inspector script tracks which props it set, so an empty map clears them.
+  const lastSelectorRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prevSelector = lastSelectorRef.current;
+    if (prevSelector && prevSelector !== liveSelector) {
+      postToIframe({
+        [INSPECTOR_MARKER]: true,
+        type: "clear_styles",
+        selector: prevSelector,
+      });
+    }
+    if (liveSelector) {
+      postToIframe({
+        [INSPECTOR_MARKER]: true,
+        type: "apply_style",
+        selector: liveSelector,
+        css: liveOverrides,
+      });
+    }
+    lastSelectorRef.current = liveSelector;
+  }, [liveSelector, liveOverrides, postToIframe, refreshKey]);
+
+  // Listen for selection events posted by the injected inspector script.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const d = e.data as
+        | { [INSPECTOR_MARKER]?: boolean; type?: string; payload?: SelectedElement }
+        | null;
+      if (!d || d[INSPECTOR_MARKER] !== true) return;
+      if (d.type !== "select" || !d.payload) return;
+      const iframe = previewContainerRef.current?.querySelector("iframe");
+      if (iframe && e.source !== iframe.contentWindow) return;
+      onElementSelect(d.payload);
+      onInspectToggle(false);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [onElementSelect, onInspectToggle]);
+
+  // Esc cancels inspect mode without selecting.
+  useEffect(() => {
+    if (!inspectMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onInspectToggle(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [inspectMode, onInspectToggle]);
+
+  // Build the inspector-injected /index.html in a separate memo keyed only on
+  // the base file. If we injected inside `sandpackFiles`, every keystroke in
+  // an unrelated code tab would regenerate the HTML and remount Sandpack.
+  const inspectorIndexHtml = useMemo(() => {
+    const base = files?.["/index.html"] ?? FALLBACK_INDEX_HTML;
+    return injectInspectorScript(base);
+  }, [files]);
+
   const sandpackFiles = useMemo(() => {
     if (!files) return null;
     const merged: Record<string, string> = { ...files, ...edits };
-    if (!merged["/index.html"]) merged["/index.html"] = FALLBACK_INDEX_HTML;
+    // Prefer a live edit to /index.html if the user is editing it; otherwise
+    // serve the inspector-injected version so clicks in the preview can be
+    // captured.
+    merged["/index.html"] = edits["/index.html"] ?? inspectorIndexHtml;
     return merged;
-  }, [edits, files]);
+  }, [edits, files, inspectorIndexHtml]);
 
   if (!workspace) {
     return (
@@ -211,7 +306,7 @@ export function PreviewPanel({
         </div>
       )}
 
-      <div className="relative min-h-0 flex-1 bg-white">
+      <div ref={previewContainerRef} className="relative min-h-0 flex-1 bg-white">
         <div
           className="absolute inset-0"
           style={{ display: activeTab === "preview" ? "block" : "none" }}
@@ -234,6 +329,38 @@ export function PreviewPanel({
             </SandpackLayout>
           </SandpackProvider>
         </div>
+        {activeTab === "preview" && (
+          <button
+            type="button"
+            onClick={() => onInspectToggle(!inspectMode)}
+            title={
+              inspectMode
+                ? "Stop inspecting (Esc)"
+                : "Inspect element (click in preview)"
+            }
+            aria-pressed={inspectMode}
+            className={`absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium shadow-sm transition ${
+              inspectMode
+                ? "border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-500"
+                : "border-slate-300 bg-white/90 text-slate-700 hover:bg-white"
+            }`}
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 3l7.07 17 2.51-7.42L20 10.07z" />
+            </svg>
+            {inspectMode ? "Inspecting…" : "Inspect"}
+          </button>
+        )}
 
         <div
           className="absolute inset-0"

@@ -122,6 +122,8 @@ function ThinkingBlock({
 
 export function MessageView({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
+  const hasActivity =
+    Boolean(message.thinking) || message.toolCalls.length > 0;
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
@@ -131,9 +133,10 @@ export function MessageView({ message }: { message: ChatMessage }) {
             : "bg-slate-800/60 text-slate-100"
         }`}
       >
-        {message.thinking && (
-          <ThinkingBlock
-            text={message.thinking}
+        {!isUser && hasActivity && (
+          <ActivityLog
+            thinking={message.thinking}
+            toolCalls={message.toolCalls}
             active={Boolean(message.pending)}
           />
         )}
@@ -145,14 +148,66 @@ export function MessageView({ message }: { message: ChatMessage }) {
             )}
           </div>
         )}
-        {message.toolCalls.length > 0 && (
-          <div className="space-y-1.5">
-            {message.toolCalls.map((c) => (
-              <ToolBlock key={c.id} call={c} />
-            ))}
-          </div>
-        )}
       </div>
+    </div>
+  );
+}
+
+function ActivityLog({
+  thinking,
+  toolCalls,
+  active,
+}: {
+  thinking: string;
+  toolCalls: ToolCall[];
+  active: boolean;
+}) {
+  // Auto-open while pending so the user sees progress; collapses on completion.
+  const [openOverride, setOpenOverride] = useState<boolean | null>(null);
+  const open = openOverride ?? active;
+  const count =
+    (thinking ? 1 : 0) + toolCalls.length;
+  const errored = toolCalls.some((c) => c.isError);
+  const summaryLabel = active
+    ? "Working…"
+    : errored
+      ? "Activity (errors)"
+      : "Activity";
+
+  return (
+    <div
+      className={`rounded-md border px-3 py-2 text-xs ${
+        errored
+          ? "border-red-500/30 bg-red-500/5 text-red-100"
+          : "border-slate-700 bg-slate-900/40 text-slate-200"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => setOpenOverride(!open)}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-center gap-2">
+          <span className="opacity-60">{open ? "▾" : "▸"}</span>
+          <span className="font-medium">{summaryLabel}</span>
+          {active && (
+            <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-indigo-300" />
+          )}
+        </span>
+        <span className="tabular-nums opacity-50">
+          {count} {count === 1 ? "step" : "steps"}
+        </span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-1.5">
+          {thinking && (
+            <ThinkingBlock text={thinking} active={active} />
+          )}
+          {toolCalls.map((c) => (
+            <ToolBlock key={c.id} call={c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
