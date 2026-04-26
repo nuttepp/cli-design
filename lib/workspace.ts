@@ -149,6 +149,27 @@ export async function deleteWorkspace(name: string): Promise<void> {
   await fs.rm(dir, { recursive: true, force: true });
 }
 
+export async function renameWorkspace(
+  from: string,
+  to: string,
+): Promise<void> {
+  if (from === to) return;
+  const src = workspacePath(from);
+  const dst = workspacePath(to);
+  try {
+    await fs.access(src);
+  } catch {
+    throw new WorkspaceError(404, "Workspace not found");
+  }
+  try {
+    await fs.access(dst);
+    throw new WorkspaceError(409, "Workspace name already exists");
+  } catch (e) {
+    if (e instanceof WorkspaceError) throw e;
+  }
+  await fs.rename(src, dst);
+}
+
 export type FileMap = Record<string, string>;
 
 export async function readWorkspaceFiles(name: string): Promise<FileMap> {

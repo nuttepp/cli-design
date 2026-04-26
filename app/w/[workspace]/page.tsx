@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ElementEditorPanel } from "@/components/ElementEditorPanel";
@@ -18,6 +18,7 @@ const RESIZER_WIDTH = 4;
 
 export default function StudioPage() {
   const params = useParams<{ workspace: string }>();
+  const router = useRouter();
   const workspace = params?.workspace
     ? decodeURIComponent(params.workspace)
     : null;
@@ -99,9 +100,12 @@ export default function StudioPage() {
         >
           ← Workspaces
         </Link>
-        <h1 className="text-sm font-semibold text-slate-100">
-          {workspace ?? "—"}
-        </h1>
+        <WorkspaceTitle
+          workspace={workspace}
+          onRenamed={(next) =>
+            router.replace(`/w/${encodeURIComponent(next)}`)
+          }
+        />
         <button
           type="button"
           onClick={() => {
@@ -189,5 +193,126 @@ export default function StudioPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function WorkspaceTitle({
+  workspace,
+  onRenamed,
+}: {
+  workspace: string | null;
+  onRenamed: (next: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  if (!workspace) {
+    return <h1 className="text-sm font-semibold text-slate-100">—</h1>;
+  }
+
+  const startEdit = () => {
+    setDraft(workspace);
+    setError(null);
+    setEditing(true);
+  };
+
+  const cancel = () => {
+    setEditing(false);
+    setError(null);
+  };
+
+  const submit = async () => {
+    const next = draft.trim();
+    if (!next || next === workspace) {
+      cancel();
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/workspaces/${encodeURIComponent(workspace)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: next }),
+        },
+      );
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        name?: string;
+      };
+      if (!res.ok) {
+        setError(data.error ?? `HTTP ${res.status}`);
+        return;
+      }
+      setEditing(false);
+      onRenamed(data.name ?? next);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={startEdit}
+        title="Rename workspace"
+        className="rounded px-1 text-sm font-semibold text-slate-100 hover:bg-slate-800"
+      >
+        {workspace}
+      </button>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+      className="flex items-center gap-2"
+    >
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.preventDefault();
+            cancel();
+          }
+        }}
+        disabled={saving}
+        autoFocus
+        className="rounded border border-slate-700 bg-slate-900 px-2 py-0.5 text-sm font-semibold text-slate-100 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+      />
+      <button
+        type="submit"
+        disabled={saving || !draft.trim()}
+        className="rounded border border-indigo-500 bg-indigo-600 px-2 py-0.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-50"
+      >
+        {saving ? "Saving…" : "Save"}
+      </button>
+      <button
+        type="button"
+        onClick={cancel}
+        disabled={saving}
+        className="rounded border border-slate-700 px-2 py-0.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+      >
+        Cancel
+      </button>
+      {error && <span className="text-xs text-red-400">{error}</span>}
+    </form>
   );
 }

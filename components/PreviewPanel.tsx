@@ -303,6 +303,40 @@ export function PreviewPanel({
               </ChromeTab>
             );
           })}
+          {activeTab === "preview" && (
+            <div className="ml-auto -mt-2 flex self-stretch items-center">
+              <button
+                type="button"
+                onClick={() => onInspectToggle(!inspectMode)}
+                title={
+                  inspectMode
+                    ? "Stop inspecting (Esc)"
+                    : "Inspect element (click in preview)"
+                }
+                aria-pressed={inspectMode}
+                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                  inspectMode
+                    ? "border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-500"
+                    : "border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                }`}
+              >
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 3l7.07 17 2.51-7.42L20 10.07z" />
+                </svg>
+                {inspectMode ? "Inspecting…" : "Inspect"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -329,39 +363,6 @@ export function PreviewPanel({
             </SandpackLayout>
           </SandpackProvider>
         </div>
-        {activeTab === "preview" && (
-          <button
-            type="button"
-            onClick={() => onInspectToggle(!inspectMode)}
-            title={
-              inspectMode
-                ? "Stop inspecting (Esc)"
-                : "Inspect element (click in preview)"
-            }
-            aria-pressed={inspectMode}
-            className={`absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium shadow-sm transition ${
-              inspectMode
-                ? "border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-500"
-                : "border-slate-300 bg-white/90 text-slate-700 hover:bg-white"
-            }`}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M3 3l7.07 17 2.51-7.42L20 10.07z" />
-            </svg>
-            {inspectMode ? "Inspecting…" : "Inspect"}
-          </button>
-        )}
-
         <div
           className="absolute inset-0"
           style={{ display: activeTab === "design-system" ? "block" : "none" }}
