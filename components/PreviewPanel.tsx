@@ -1,0 +1,292 @@
+"use client";
+
+import {
+  SandpackProvider,
+  SandpackLayout,
+  SandpackPreview,
+} from "@codesandbox/sandpack-react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
+interface Props {
+  workspace: string | null;
+  refreshKey: number;
+  openFiles: string[];
+  activeTab: string;
+  onSelectTab: (tab: string) => void;
+  onCloseFile: (path: string) => void;
+  hideTabs?: boolean;
+}
+
+const SAVE_DEBOUNCE_MS = 5000;
+
+const FALLBACK_INDEX_HTML = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Preview</title>
+    <style>
+      body { font-family: system-ui, sans-serif; display: grid; place-items: center; min-height: 100vh; color: #475569; }
+    </style>
+  </head>
+  <body>
+    <p>Empty workspace. Ask Claude to build something.</p>
+  </body>
+</html>
+`;
+
+export function PreviewPanel({
+  workspace,
+  refreshKey,
+  openFiles,
+  activeTab,
+  onSelectTab,
+  onCloseFile,
+  hideTabs = false,
+}: Props) {
+  const [files, setFiles] = useState<Record<string, string> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [edits, setEdits] = useState<Record<string, string>>({});
+  const [dirty, setDirty] = useState<Record<string, boolean>>({});
+  const saveTimers = useRef<Map<string, number>>(new Map());
+  const editsRef = useRef(edits);
+  const dirtyRef = useRef(dirty);
+  editsRef.current = edits;
+  dirtyRef.current = dirty;
+
+  useEffect(() => {
+    if (!workspace) {
+      setFiles(null);
+      setEdits({});
+      setDirty({});
+      return;
+    }
+    let cancelled = false;
+    setError(null);
+    fetch(`/api/files/${encodeURIComponent(workspace)}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return (await r.json()) as { files: Record<string, string> };
+      })
+      .then(({ files }) => {
+        if (cancelled) return;
+        setFiles(files);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workspace, refreshKey]);
+
+  const flushSave = useCallback(
+    async (path: string) => {
+      if (!workspace) return;
+      const timers = saveTimers.current;
+      const t = timers.get(path);
+      if (t) {
+        window.clearTimeout(t);
+        timers.delete(path);
+      }
+      if (!dirtyRef.current[path]) return;
+      const content = editsRef.current[path];
+      if (content === undefined) return;
+      try {
+        const res = await fetch(
+          `/api/files/${encodeURIComponent(workspace)}`,
+          {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ path, content }),
+          },
+        );
+        if (!res.ok) return;
+        setDirty((d) => ({ ...d, [path]: false }));
+        setFiles((f) => (f ? { ...f, [path]: content } : f));
+      } catch {
+        // leave dirty so the next change retries
+      }
+    },
+    [workspace],
+  );
+
+  // Flush pending save when active tab changes away from an editor tab.
+  const prevActiveRef = useRef<string>(activeTab);
+  useEffect(() => {
+    const prev = prevActiveRef.current;
+    if (prev !== activeTab && prev !== "preview") {
+      void flushSave(prev);
+    }
+    prevActiveRef.current = activeTab;
+  }, [activeTab, flushSave]);
+
+  const handleEdit = (path: string, value: string) => {
+    setEdits((e) => ({ ...e, [path]: value }));
+    setDirty((d) => ({ ...d, [path]: true }));
+    const timers = saveTimers.current;
+    const existing = timers.get(path);
+    if (existing) window.clearTimeout(existing);
+    const id = window.setTimeout(() => {
+      timers.delete(path);
+      void flushSave(path);
+    }, SAVE_DEBOUNCE_MS);
+    timers.set(path, id);
+  };
+
+  const handleClose = (path: string) => {
+    void flushSave(path);
+    onCloseFile(path);
+  };
+
+  const sandpackFiles = useMemo(() => {
+    if (!files) return null;
+    const merged: Record<string, string> = { ...files, ...edits };
+    if (!merged["/index.html"]) merged["/index.html"] = FALLBACK_INDEX_HTML;
+    return merged;
+  }, [edits, files]);
+
+  if (!workspace) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+        No workspace selected.
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="flex h-full items-center justify-center p-4 text-sm text-red-400">
+        Failed to load workspace files: {error}
+      </div>
+    );
+  }
+  if (!files || !sandpackFiles) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-slate-500">
+        Loading…
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full flex-col">
+      {!hideTabs && (
+        <div className="flex items-end gap-1 overflow-x-auto border-b border-slate-800 bg-slate-950 px-2 pt-2">
+          <ChromeTab
+            active={activeTab === "preview"}
+            onClick={() => onSelectTab("preview")}
+          >
+            <span className="text-emerald-400">●</span>
+            <span>Preview</span>
+          </ChromeTab>
+          {openFiles.map((path) => {
+            const name = path.slice(path.lastIndexOf("/") + 1);
+            return (
+              <ChromeTab
+                key={path}
+                active={activeTab === path}
+                onClick={() => onSelectTab(path)}
+                onClose={() => handleClose(path)}
+                title={path}
+              >
+                <span className="max-w-[10rem] truncate">{name}</span>
+                {dirty[path] && <span className="text-amber-400">•</span>}
+              </ChromeTab>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="relative min-h-0 flex-1 bg-white">
+        <div
+          className="absolute inset-0"
+          style={{ display: activeTab === "preview" ? "block" : "none" }}
+        >
+          <SandpackProvider
+            key={`${workspace}:${refreshKey}`}
+            template="static"
+            files={sandpackFiles}
+            options={{ recompileMode: "delayed", recompileDelay: 200 }}
+            theme="dark"
+          >
+            <SandpackLayout
+              style={{ height: "100%", border: 0, borderRadius: 0 }}
+            >
+              <SandpackPreview
+                style={{ height: "100%" }}
+                showOpenInCodeSandbox={false}
+                showRefreshButton
+              />
+            </SandpackLayout>
+          </SandpackProvider>
+        </div>
+
+        {openFiles.map((path) => {
+          const content = edits[path] ?? files[path] ?? "";
+          return (
+            <textarea
+              key={path}
+              value={content}
+              onChange={(e) => handleEdit(path, e.target.value)}
+              spellCheck={false}
+              className="absolute inset-0 h-full w-full resize-none bg-slate-950 p-3 font-mono text-[12px] leading-snug text-slate-100 focus:outline-none"
+              style={{ display: activeTab === path ? "block" : "none" }}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ChromeTab({
+  active,
+  onClick,
+  onClose,
+  title,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  onClose?: () => void;
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      title={title}
+      className={`group flex shrink-0 items-center gap-2 rounded-t-md border border-b-0 px-3 py-1.5 text-xs ${
+        active
+          ? "border-slate-800 bg-slate-900 text-slate-100"
+          : "border-transparent bg-slate-900/40 text-slate-400 hover:bg-slate-900/70"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-center gap-2"
+      >
+        {children}
+      </button>
+      {onClose && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          aria-label="Close tab"
+          className="rounded px-1 text-slate-500 opacity-60 hover:bg-slate-800 hover:text-slate-200 group-hover:opacity-100"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}

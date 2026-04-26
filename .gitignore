@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.DS_Store
+*.log
+.env*.local
+
+# User-generated workspaces — keep the directory but ignore contents
+workspaces/*
+!workspaces/.gitkeep

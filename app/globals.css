@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+html,
+body,
+#__next {
+  height: 100%;
+}
+
+body {
+  background: #0b0b0c;
+  color: #e7e7e9;
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+/* Force Sandpack to fill its container instead of the default 300px layout
+   height. Applies to preview, code editor, and file explorer panes. */
+.sp-wrapper,
+.sp-layout,
+.sp-stack,
+.sp-preview-container,
+.sp-preview-iframe,
+.sp-code-editor,
+.sp-file-explorer {
+  height: 100% !important;
+  max-height: 100% !important;
+  flex: 1 1 auto !important;
+}
+
+.sp-preview-iframe {
+  width: 100% !important;
+  min-height: 0 !important;
+}
