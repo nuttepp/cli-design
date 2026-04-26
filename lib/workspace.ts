@@ -1,5 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { buildGlobalCss } from "./designSystem";
+import { loadTokens } from "./designSystemStore";
 
 export const WORKSPACES_ROOT = path.resolve(process.cwd(), "workspaces");
 
@@ -67,7 +69,8 @@ const STARTER_INDEX_HTML = `<!doctype html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Preview</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="global.css" />
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main class="hello">
@@ -79,21 +82,15 @@ const STARTER_INDEX_HTML = `<!doctype html>
 </html>
 `;
 
-const STARTER_STYLES_CSS = `:root {
-  color-scheme: light dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
+const STARTER_STYLE_CSS = `/*
+ * style.css — your custom workspace styles.
+ * Design system tokens come from global.css (do not edit that file).
+ */
 
-body {
-  margin: 0;
+.hello {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-.hello {
   text-align: center;
 }
 
@@ -104,7 +101,7 @@ body {
 
 .hello p {
   margin: 0;
-  color: #94a3b8;
+  color: var(--color-text-muted);
 }
 `;
 
@@ -119,7 +116,9 @@ Plain HTML / CSS / JavaScript. No bundler, no framework — everything you put
 in this folder is served directly to the live preview iframe.
 
 - \`index.html\` is the entry; the preview renders this file.
-- \`styles.css\` is linked from \`index.html\`.
+- \`global.css\` is generated from the Design System tab — do not edit by
+  hand. It exposes design tokens (colors, spacing, radii) as CSS variables.
+- \`style.css\` is for your custom workspace styles.
 - \`script.js\` is loaded by \`index.html\`.
 
 Ask Claude in the chat panel to add features.
@@ -135,9 +134,11 @@ export async function createWorkspace(name: string): Promise<void> {
     }
     throw e;
   }
+  const tokens = await loadTokens();
   await Promise.all([
     fs.writeFile(path.join(dir, "index.html"), STARTER_INDEX_HTML, "utf8"),
-    fs.writeFile(path.join(dir, "styles.css"), STARTER_STYLES_CSS, "utf8"),
+    fs.writeFile(path.join(dir, "global.css"), buildGlobalCss(tokens), "utf8"),
+    fs.writeFile(path.join(dir, "style.css"), STARTER_STYLE_CSS, "utf8"),
     fs.writeFile(path.join(dir, "script.js"), STARTER_SCRIPT_JS, "utf8"),
     fs.writeFile(path.join(dir, "README.md"), STARTER_README, "utf8"),
   ]);

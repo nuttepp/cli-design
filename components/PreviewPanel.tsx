@@ -13,6 +13,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { DesignSystem } from "./DesignSystem";
 
 interface Props {
   workspace: string | null;
@@ -185,6 +186,13 @@ export function PreviewPanel({
             <span className="text-emerald-400">●</span>
             <span>Preview</span>
           </ChromeTab>
+          <ChromeTab
+            active={activeTab === "design-system"}
+            onClick={() => onSelectTab("design-system")}
+          >
+            <span className="text-indigo-400">●</span>
+            <span>Design System</span>
+          </ChromeTab>
           {openFiles.map((path) => {
             const name = path.slice(path.lastIndexOf("/") + 1);
             return (
@@ -225,6 +233,13 @@ export function PreviewPanel({
               />
             </SandpackLayout>
           </SandpackProvider>
+        </div>
+
+        <div
+          className="absolute inset-0"
+          style={{ display: activeTab === "design-system" ? "block" : "none" }}
+        >
+          <DesignSystem />
         </div>
 
         {openFiles.map((path) => {
