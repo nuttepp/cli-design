@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Markdown from "react-markdown";
 import {
   parseClarifyingQuestions,
   type ClarifyingQuestion,
@@ -189,8 +190,14 @@ export function MessageView({
           />
         )}
         {visibleText && (
-          <div className="whitespace-pre-wrap leading-relaxed">
-            {visibleText}
+          <div className="leading-relaxed">
+            <div className={`prose prose-sm max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-pre:my-2 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-lg ${
+              isUser
+                ? "prose-invert prose-code:bg-white/15 prose-pre:bg-black/20"
+                : "dark:prose-invert prose-code:bg-black/10 dark:prose-code:bg-white/10 prose-pre:bg-black/20 dark:prose-pre:bg-black/40"
+            }`}>
+              <Markdown>{visibleText}</Markdown>
+            </div>
             {message.pending && (
               <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-current align-middle" />
             )}

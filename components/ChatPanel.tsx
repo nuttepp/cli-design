@@ -115,11 +115,11 @@ export function ChatPanel({
             </div>
           </div>
         )}
-        {messages.map((m: ChatMessage) => (
+        {messages.map((m: ChatMessage, i: number) => (
           <MessageView
             key={m.id}
             message={m}
-            onOpenBrief={onOpenBrief}
+            onOpenBrief={i === messages.length - 1 ? onOpenBrief : undefined}
           />
         ))}
       </div>
