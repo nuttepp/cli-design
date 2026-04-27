@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface DeleteConfirmModalProps {
   workspaceName: string;
@@ -10,11 +10,16 @@ interface DeleteConfirmModalProps {
 }
 
 export function DeleteConfirmModal({ workspaceName, open, onConfirm, onCancel }: DeleteConfirmModalProps) {
-  const cancelRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [confirmText, setConfirmText] = useState("");
+  const canConfirm = confirmText === "delete";
 
   useEffect(() => {
-    if (!open) return;
-    cancelRef.current?.focus();
+    if (!open) {
+      setConfirmText("");
+      return;
+    }
+    inputRef.current?.focus();
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCancel();
     };
@@ -53,9 +58,22 @@ export function DeleteConfirmModal({ workspaceName, open, onConfirm, onCancel }:
           This will permanently remove all files in this workspace.
         </p>
 
-        <div className="mt-6 flex gap-3">
+        <div className="mt-4">
+          <label className="block text-xs text-slate-500 dark:text-slate-400">
+            Type <span className="font-semibold text-slate-700 dark:text-slate-200">delete</span> to confirm
+          </label>
+          <input
+            ref={inputRef}
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && canConfirm) onConfirm(); }}
+            placeholder="delete"
+            className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+          />
+        </div>
+
+        <div className="mt-5 flex gap-3">
           <button
-            ref={cancelRef}
             type="button"
             onClick={onCancel}
             className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
@@ -65,7 +83,8 @@ export function DeleteConfirmModal({ workspaceName, open, onConfirm, onCancel }:
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700"
+            disabled={!canConfirm}
+            className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             Delete
           </button>

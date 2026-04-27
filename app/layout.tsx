@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CLI-D",
-  description: "Design with CLI — prototype UIs using AI coding agents.",
+  title: "UX-CLI",
+  description: "UX-CLI — prototype UIs using AI coding agents.",
 };
 
 const themeBootstrap = `

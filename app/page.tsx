@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { AnimatedBackground } from "@/components/AnimatedBackground";
 import { DeleteConfirmModal } from "@/components/DeleteConfirmModal";
 import { EmptyWorkspaceState } from "@/components/EmptyWorkspaceState";
+import { Logo } from "@/components/Logo";
 import { useCliHealth } from "@/lib/useCliHealth";
 import type { HealthStatus } from "@/lib/useCliHealth";
 import { readAllMeta, updateMeta, removeMeta, type WorkspaceMeta } from "@/lib/workspaceMeta";
@@ -24,6 +25,9 @@ const CLI_LIST: {
   install: string;
   login: string;
   letter: string;
+  logo: string;
+  logoBg: string;
+  logoText: string;
   gradient: string;
   selectedBorder: string;
   selectedBg: string;
@@ -36,6 +40,9 @@ const CLI_LIST: {
     install: "npm i -g @anthropic-ai/claude-code",
     login: "claude login",
     letter: "C",
+    logo: "/logos/claude.svg",
+    logoBg: "#D97757",
+    logoText: "text-white",
     gradient: "from-indigo-500 to-purple-600",
     selectedBorder: "border-indigo-500",
     selectedBg: "bg-indigo-50 dark:bg-indigo-500/10",
@@ -48,6 +55,9 @@ const CLI_LIST: {
     install: "npm i -g kilo-code",
     login: "kilo auth add",
     letter: "K",
+    logo: "/logos/kilo.svg",
+    logoBg: "#ffffff",
+    logoText: "text-slate-800 dark:text-slate-100",
     gradient: "from-amber-500 to-orange-600",
     selectedBorder: "border-amber-500",
     selectedBg: "bg-amber-50 dark:bg-amber-500/10",
@@ -60,6 +70,9 @@ const CLI_LIST: {
     install: "npm i -g @google/gemini-cli",
     login: "gemini auth",
     letter: "G",
+    logo: "/logos/gemini.svg",
+    logoBg: "#ffffff",
+    logoText: "text-slate-800 dark:text-slate-100",
     gradient: "from-cyan-500 to-blue-600",
     selectedBorder: "border-cyan-500",
     selectedBg: "bg-cyan-50 dark:bg-cyan-500/10",
@@ -194,10 +207,8 @@ export default function HomePage() {
         <header className="border-b border-slate-200/60 bg-white/70 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/70">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
-                C
-              </div>
-              <h1 className="text-sm font-semibold tracking-tight">CLI-D</h1>
+              <Logo className="h-8 w-8" />
+              <h1 className="text-base font-bold tracking-tight">UX-CLI</h1>
             </div>
             <ThemeToggle />
           </div>
@@ -207,7 +218,7 @@ export default function HomePage() {
           {/* Hero */}
           <div className="mb-6 text-center">
             <h2 className="bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-500 bg-clip-text text-4xl font-bold tracking-tight text-transparent dark:from-indigo-400 dark:via-purple-400 dark:to-cyan-400">
-              Design with CLI
+              UX-CLI
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-base text-slate-500 dark:text-slate-400">
               Prototype UIs using AI coding agents. Select your CLI, create a workspace, and start building.
@@ -256,7 +267,7 @@ export default function HomePage() {
                       disabled={!isReady && health !== null}
                       className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left transition ${
                         isSelected
-                          ? `${cli.selectedBorder} ${cli.selectedBg} shadow-sm`
+                          ? "border-indigo-500 bg-indigo-50 shadow-sm dark:border-indigo-500 dark:bg-indigo-500/10"
                           : isReady
                             ? "border-slate-200 bg-white/80 hover:border-slate-300 hover:shadow-sm dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-slate-700"
                             : "cursor-not-allowed border-slate-200/60 bg-slate-50/80 opacity-60 dark:border-slate-800/60 dark:bg-slate-900/30"
@@ -264,16 +275,27 @@ export default function HomePage() {
                     >
                       {/* Brand icon */}
                       <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${cli.gradient} text-sm font-bold text-white shadow-sm ${
+                        style={{ backgroundColor: cli.logoBg }}
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg shadow-sm ring-1 ring-slate-200 dark:ring-slate-700 ${cli.logoText} ${
                           !isReady && health !== null ? "opacity-40" : ""
                         }`}
                       >
-                        {cli.letter}
+                        <img
+                          src={cli.logo}
+                          alt={cli.letter}
+                          className="h-6 w-6 object-contain"
+                          onError={(e) => {
+                            // Fallback to letter if image fails to load
+                            (e.target as HTMLImageElement).style.display = "none";
+                            (e.target as HTMLImageElement).parentElement!.innerText = cli.letter;
+                            (e.target as HTMLImageElement).parentElement!.className += ` bg-gradient-to-br ${cli.gradient} text-white font-bold text-sm`;
+                          }}
+                        />
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-medium ${isSelected ? cli.accent : ""}`}>
+                          <span className={`text-sm font-medium ${isSelected ? "text-indigo-700 dark:text-indigo-300" : ""}`}>
                             {cli.label}
                           </span>
                         </div>
@@ -341,19 +363,22 @@ export default function HomePage() {
                   Select a CLI agent first.
                 </p>
               )}
-                <form onSubmit={create} className="mt-3 flex gap-3">
+                <form onSubmit={create} className="mt-3 flex flex-col gap-2">
+                  <div className="flex gap-3">
                   <input
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    placeholder="my-app"
-                    pattern="[a-z0-9][a-z0-9-]{0,39}"
-                    title="lowercase letters, digits and dashes; max 40 chars"
+                    placeholder="Use lowercase letters, digits, and dashes only (max 40 chars)"
                     disabled={!selectedCliReady}
-                    className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                    className={`flex-1 rounded-lg border bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500 ${
+                      newName && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(newName)
+                        ? "border-red-400 focus:border-red-500 focus:ring-red-500/20 dark:border-red-500"
+                        : "border-slate-300 focus:border-indigo-500 focus:ring-indigo-500/20 dark:border-slate-700"
+                    }`}
                   />
                   <button
                     type="submit"
-                    disabled={!newName.trim() || creating || !selectedCliReady}
+                    disabled={!newName.trim() || creating || !selectedCliReady || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(newName)}
                     className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     {creating ? (
@@ -368,6 +393,12 @@ export default function HomePage() {
                       </>
                     )}
                   </button>
+                  </div>
+                  {newName && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(newName) && (
+                    <p className="text-xs text-red-500 dark:text-red-400">
+                      Use lowercase letters, digits, and dashes only (max 40 chars)
+                    </p>
+                  )}
                 </form>
                 {error && (
                   <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-500/20 dark:bg-red-500/5 dark:text-red-400">
@@ -472,8 +503,13 @@ function WorkspaceCardContent({
             <>
               <span>Opened {relativeTime(meta.lastOpened)}</span>
               {cliInfo && (
-                <span className="inline-flex items-center gap-1">
-                  <span className={`inline-block h-1.5 w-1.5 rounded-full bg-gradient-to-br ${cliInfo.gradient}`} />
+                <span className="inline-flex items-center gap-1.5">
+                  <img
+                    src={cliInfo.logo}
+                    alt=""
+                    className="h-3 w-3 object-contain"
+                    onError={(e) => (e.currentTarget.style.display = "none")}
+                  />
                   {cliInfo.label}
                 </span>
               )}
