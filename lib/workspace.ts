@@ -39,7 +39,7 @@ export function validateName(name: string): string {
   if (!NAME_RE.test(name)) {
     throw new WorkspaceError(
       400,
-      "Workspace name must match ^[a-z0-9][a-z0-9-]{0,39}$",
+      "Use lowercase letters, digits, and dashes only (max 40 chars)",
     );
   }
   return name;
@@ -65,6 +65,49 @@ export async function listWorkspaces(): Promise<string[]> {
     .filter((e) => e.isDirectory() && NAME_RE.test(e.name))
     .map((e) => e.name)
     .sort();
+}
+
+export interface WorkspaceInfo {
+  name: string;
+  fileCount: number;
+  lastModified: string;
+}
+
+async function countFiles(dir: string, max: number): Promise<number> {
+  let count = 0;
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    if (count >= max) break;
+    if (entry.name.startsWith(".") || entry.name === "node_modules") continue;
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      count += await countFiles(abs, max - count);
+    } else if (entry.isFile()) {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (TEXT_EXTENSIONS.has(ext)) count++;
+    }
+  }
+  return count;
+}
+
+export async function listWorkspacesWithInfo(): Promise<WorkspaceInfo[]> {
+  await ensureRoot();
+  const entries = await fs.readdir(WORKSPACES_ROOT, { withFileTypes: true });
+  const dirs = entries
+    .filter((e) => e.isDirectory() && NAME_RE.test(e.name))
+    .map((e) => e.name)
+    .sort();
+
+  return Promise.all(
+    dirs.map(async (name) => {
+      const dir = path.join(WORKSPACES_ROOT, name);
+      const [stat, fileCount] = await Promise.all([
+        fs.stat(dir),
+        countFiles(dir, MAX_FILES),
+      ]);
+      return { name, fileCount, lastModified: stat.mtime.toISOString() };
+    }),
+  );
 }
 
 const STARTER_INDEX_HTML = `<!DOCTYPE html>

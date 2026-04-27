@@ -16,7 +16,8 @@ export function WorkspaceSelector({ selected, onSelect }: Props) {
   const refresh = useCallback(async () => {
     const res = await fetch("/api/workspaces");
     if (!res.ok) return;
-    const { workspaces } = (await res.json()) as { workspaces: string[] };
+    const data = (await res.json()) as { workspaces: Array<{ name: string }> };
+    const workspaces = data.workspaces.map((w) => w.name);
     setList(workspaces);
     if (selected && !workspaces.includes(selected)) {
       onSelect(workspaces[0] ?? null);

@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import {
   createWorkspace,
-  listWorkspaces,
+  listWorkspacesWithInfo,
   WorkspaceError,
 } from "@/lib/workspace";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const names = await listWorkspaces();
-  return NextResponse.json({ workspaces: names });
+  const workspaces = await listWorkspacesWithInfo();
+  return NextResponse.json({ workspaces });
 }
 
 export async function POST(req: Request) {
