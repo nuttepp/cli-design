@@ -191,6 +191,7 @@ export function useChat({
         thinking: "",
         toolCalls: [],
         elementRef,
+        timestamp: Date.now(),
       };
       const assistantId = newId();
       const assistantMsg: ChatMessage = {
@@ -200,6 +201,7 @@ export function useChat({
         thinking: "",
         toolCalls: [],
         pending: true,
+        timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setBusy(true);

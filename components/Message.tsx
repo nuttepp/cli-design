@@ -34,6 +34,7 @@ export interface ChatMessage {
   toolCalls: ToolCall[];
   pending?: boolean;
   elementRef?: ElementRef;
+  timestamp?: number;
 }
 
 function describeTool(call: ToolCall): string {
@@ -160,10 +161,24 @@ export function MessageView({
       : null;
   const visibleText = parsed ? parsed.cleanText : message.text;
 
+  const timeStr = message.timestamp
+    ? (() => {
+        const d = new Date(message.timestamp!);
+        const now = new Date();
+        const isToday = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+        return isToday
+          ? d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      })()
+    : null;
+
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex items-end gap-2 ${isUser ? "justify-end" : "justify-start"}`}>
+      {!isUser && timeStr && (
+        <span className="mb-1 shrink-0 text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
+      )}
       <div
-        className={`max-w-[90%] space-y-2 rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+        className={`max-w-[80%] space-y-2 rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
           isUser
             ? "bg-indigo-600 text-white"
             : "bg-white text-slate-900 ring-1 ring-slate-200/60 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-slate-700/40"
@@ -226,6 +241,9 @@ export function MessageView({
           </button>
         )}
       </div>
+      {isUser && timeStr && (
+        <span className="mb-1 shrink-0 text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
+      )}
     </div>
   );
 }
