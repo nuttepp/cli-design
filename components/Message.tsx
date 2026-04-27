@@ -5,7 +5,8 @@ import {
   parseClarifyingQuestions,
   type ClarifyingQuestion,
 } from "@/lib/clarifyingQuestions";
-import { QuestionsForm } from "./QuestionsForm";
+
+import { DiffBlock } from "./DiffBlock";
 
 export type ChatRole = "user" | "assistant";
 
@@ -17,6 +18,13 @@ export interface ToolCall {
   isError?: boolean;
 }
 
+export interface ElementRef {
+  tag: string;
+  id: string | null;
+  classList: string[];
+  selector: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: ChatRole;
@@ -24,6 +32,7 @@ export interface ChatMessage {
   thinking: string;
   toolCalls: ToolCall[];
   pending?: boolean;
+  elementRef?: ElementRef;
 }
 
 function describeTool(call: ToolCall): string {
@@ -127,19 +136,18 @@ function ThinkingBlock({
 
 interface MessageViewProps {
   message: ChatMessage;
-  onAnswerQuestions?: (text: string) => void;
   onOpenBrief?: (
     messageId: string,
     questions: ClarifyingQuestion[],
   ) => void;
+  onUndo?: () => void;
 }
 
-const INLINE_QUESTION_LIMIT = 2;
 
 export function MessageView({
   message,
-  onAnswerQuestions,
   onOpenBrief,
+  onUndo,
 }: MessageViewProps) {
   const isUser = message.role === "user";
   const hasActivity =
@@ -160,6 +168,19 @@ export function MessageView({
             : "bg-slate-100 text-slate-900 dark:bg-slate-800/60 dark:text-slate-100"
         }`}
       >
+        {isUser && message.elementRef && (
+          <div className="flex items-center gap-1.5 rounded bg-indigo-500/30 px-2 py-1 text-[11px]">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70"><path d="M3 3l7.07 17 2.51-7.42L20 10.07z" /></svg>
+            <span className="font-mono opacity-90">
+              &lt;{message.elementRef.tag}
+              {message.elementRef.id ? `#${message.elementRef.id}` : ""}
+              {message.elementRef.classList.length
+                ? `.${message.elementRef.classList.slice(0, 2).join(".")}`
+                : ""}
+              &gt;
+            </span>
+          </div>
+        )}
         {!isUser && hasActivity && (
           <ActivityLog
             thinking={message.thinking}
@@ -175,23 +196,57 @@ export function MessageView({
             )}
           </div>
         )}
-        {parsed && onAnswerQuestions && (
-          parsed.questions.length <= INLINE_QUESTION_LIMIT ? (
-            <QuestionsForm
-              questions={parsed.questions}
-              onSubmit={onAnswerQuestions}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => onOpenBrief?.(message.id, parsed.questions)}
-              className="inline-flex items-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-200 hover:bg-indigo-500/20"
-            >
-              Open brief ({parsed.questions.length} questions) →
-            </button>
-          )
+        {parsed && onOpenBrief && (
+          <button
+            type="button"
+            onClick={() => onOpenBrief(message.id, parsed.questions)}
+            className="inline-flex items-center gap-2 rounded-md border border-indigo-400/40 bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-200 hover:bg-indigo-500/20"
+          >
+            Open brief ({parsed.questions.length} questions) →
+          </button>
+        )}
+        {onUndo && !message.pending && (
+          <button
+            type="button"
+            onClick={onUndo}
+            className="mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-slate-500 hover:bg-slate-200/60 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-200"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <polyline points="1 4 1 10 7 10" />
+              <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+            </svg>
+            Undo this turn
+          </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function CollapsedSteps({ calls }: { calls: ToolCall[] }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="flex items-center gap-1.5 rounded px-2 py-1 text-[11px] text-slate-400 hover:bg-slate-200/40 hover:text-slate-600 dark:hover:bg-slate-800/60 dark:hover:text-slate-300"
+      >
+        <span className="opacity-60">{expanded ? "▾" : "▸"}</span>
+        {expanded ? "Hide" : "Show"} {calls.length} earlier {calls.length === 1 ? "step" : "steps"}
+      </button>
+      {expanded && (
+        <div className="mt-1.5 space-y-1.5">
+          {calls.map((c) => {
+            const isFileWrite = ["Write", "Edit", "NotebookEdit"].includes(c.name);
+            return isFileWrite ? (
+              <DiffBlock key={c.id} call={c} />
+            ) : (
+              <ToolBlock key={c.id} call={c} />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -213,17 +268,11 @@ function ActivityLog({
   const errored = toolCalls.some((c) => c.isError);
   const summaryLabel = active
     ? "Working…"
-    : errored
-      ? "Activity (errors)"
-      : "Activity";
+    : "Activity";
 
   return (
     <div
-      className={`rounded-md border px-3 py-2 text-xs ${
-        errored
-          ? "border-red-500/30 bg-red-500/5 text-red-700 dark:text-red-100"
-          : "border-slate-200 bg-white/60 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200"
-      }`}
+      className="rounded-md border border-slate-200 bg-white/60 px-3 py-2 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-200"
     >
       <button
         type="button"
@@ -246,9 +295,26 @@ function ActivityLog({
           {thinking && (
             <ThinkingBlock text={thinking} active={active} />
           )}
-          {toolCalls.map((c) => (
-            <ToolBlock key={c.id} call={c} />
-          ))}
+          {(() => {
+            const VISIBLE_TAIL = 3;
+            const hiddenCount = active ? Math.max(0, toolCalls.length - VISIBLE_TAIL) : 0;
+            const visibleCalls = active ? toolCalls.slice(hiddenCount) : toolCalls;
+            return (
+              <>
+                {hiddenCount > 0 && (
+                  <CollapsedSteps calls={toolCalls.slice(0, hiddenCount)} />
+                )}
+                {visibleCalls.map((c) => {
+                  const isFileWrite = ["Write", "Edit", "NotebookEdit"].includes(c.name);
+                  return isFileWrite ? (
+                    <DiffBlock key={c.id} call={c} />
+                  ) : (
+                    <ToolBlock key={c.id} call={c} />
+                  );
+                })}
+              </>
+            );
+          })()}
         </div>
       )}
     </div>

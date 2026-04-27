@@ -15,7 +15,9 @@ import {
 } from "react";
 import { DesignSystem } from "./DesignSystem";
 import { QuestionsForm } from "./QuestionsForm";
+import { CodeEditor } from "./CodeEditor";
 import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
+import { useTheme } from "@/lib/useTheme";
 import {
   INSPECTOR_MARKER,
   injectInspectorScript,
@@ -57,7 +59,7 @@ const FALLBACK_INDEX_HTML = `<!doctype html>
     </style>
   </head>
   <body>
-    <p>Empty workspace. Ask Claude to build something.</p>
+    <p>Empty workspace. Ask AI to build something.</p>
   </body>
 </html>
 `;
@@ -79,6 +81,7 @@ export function PreviewPanel({
   onCloseBrief,
   onSubmitBrief,
 }: Props) {
+  const { theme } = useTheme();
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const [files, setFiles] = useState<Record<string, string> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -243,23 +246,37 @@ export function PreviewPanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [inspectMode, onInspectToggle]);
 
-  // Build the inspector-injected /index.html in a separate memo keyed only on
-  // the base file. If we injected inside `sandpackFiles`, every keystroke in
-  // an unrelated code tab would regenerate the HTML and remount Sandpack.
-  const inspectorIndexHtml = useMemo(() => {
-    const base = files?.["/index.html"] ?? FALLBACK_INDEX_HTML;
-    return injectInspectorScript(base);
+  // Detect workspace framework from files present.
+  type SandpackTemplate = "static" | "react" | "vue" | "svelte" | "angular";
+  const detectedTemplate: SandpackTemplate = useMemo(() => {
+    if (!files) return "static";
+    if (files["/App.js"] || files["/index.js"]) return "react";
+    if (files["/App.vue"]) return "vue";
+    if (files["/App.svelte"]) return "svelte";
+    if (Object.keys(files).some((f) => f.endsWith(".component.ts") || f === "/angular.json")) return "angular";
+    return "static";
   }, [files]);
+
+  // Build the inspector-injected index.html. React uses /public/index.html,
+  // everything else uses /index.html.
+  const inspectorIndexHtml = useMemo(() => {
+    const base = detectedTemplate === "react"
+      ? (files?.["/public/index.html"] ?? FALLBACK_INDEX_HTML)
+      : (files?.["/index.html"] ?? FALLBACK_INDEX_HTML);
+    return injectInspectorScript(base);
+  }, [files, detectedTemplate]);
 
   const sandpackFiles = useMemo(() => {
     if (!files) return null;
     const merged: Record<string, string> = { ...files, ...edits };
-    // Prefer a live edit to /index.html if the user is editing it; otherwise
-    // serve the inspector-injected version so clicks in the preview can be
-    // captured.
-    merged["/index.html"] = edits["/index.html"] ?? inspectorIndexHtml;
+    if (detectedTemplate === "react") {
+      merged["/public/index.html"] =
+        edits["/public/index.html"] ?? inspectorIndexHtml;
+    } else {
+      merged["/index.html"] = edits["/index.html"] ?? inspectorIndexHtml;
+    }
     return merged;
-  }, [edits, files, inspectorIndexHtml]);
+  }, [edits, files, inspectorIndexHtml, detectedTemplate]);
 
   if (!workspace) {
     return (
@@ -370,9 +387,10 @@ export function PreviewPanel({
           style={{ display: activeTab === "preview" ? "block" : "none" }}
         >
           <SandpackProvider
-            key={`${workspace}:${refreshKey}`}
-            template="static"
+            key={`${workspace}:${refreshKey}:${detectedTemplate}`}
+            template={detectedTemplate}
             files={sandpackFiles}
+            customSetup={detectedTemplate === "react" ? { dependencies: { "react-router-dom": "^7.5.0" } } : undefined}
             options={{ recompileMode: "delayed", recompileDelay: 200 }}
             theme="dark"
           >
@@ -413,15 +431,20 @@ export function PreviewPanel({
 
         {openFiles.map((path) => {
           const content = edits[path] ?? files[path] ?? "";
+          const ext = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
           return (
-            <textarea
+            <div
               key={path}
-              value={content}
-              onChange={(e) => handleEdit(path, e.target.value)}
-              spellCheck={false}
-              className="absolute inset-0 h-full w-full resize-none bg-white p-3 font-mono text-[12px] leading-snug text-slate-900 focus:outline-none dark:bg-slate-950 dark:text-slate-100"
+              className="absolute inset-0"
               style={{ display: activeTab === path ? "block" : "none" }}
-            />
+            >
+              <CodeEditor
+                value={content}
+                onChange={(v) => handleEdit(path, v)}
+                language={ext}
+                dark={theme === "dark"}
+              />
+            </div>
           );
         })}
       </div>

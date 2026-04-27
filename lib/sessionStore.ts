@@ -1,4 +1,4 @@
-// In-memory mapping of workspace name → most recent claude CLI session id.
+// In-memory mapping of session key → most recent CLI session id.
 // Process-local; resets on dev-server restart. Fine for a single-user local tool.
 
 const store = new Map<string, string>();

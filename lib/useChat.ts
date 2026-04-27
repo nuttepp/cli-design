@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatMessage, ToolCall } from "@/components/Message";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChatMessage, ElementRef, ToolCall } from "@/components/Message";
 import type { SelectedElement } from "./previewInspector";
+import { pushSnapshot, popSnapshot, getSnapshots } from "./undoStore";
+import {
+  parseClarifyingQuestions,
+  type ClarifyingQuestion,
+} from "./clarifyingQuestions";
 
 interface UseChatOptions {
   workspace: string | null;
+  cli?: string;
   onTurnComplete: () => void;
+  onQuestionsDetected?: (messageId: string, questions: ClarifyingQuestion[]) => void;
 }
 
 interface SendOptions {
@@ -21,6 +28,8 @@ export interface UseChatResult {
   elapsed: number;
   send: (text: string, opts?: SendOptions) => Promise<void>;
   stop: () => void;
+  undo: () => Promise<void>;
+  canUndo: boolean;
 }
 
 interface ChatStreamEvent {
@@ -51,10 +60,6 @@ function newId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function chatHistoryKey(workspace: string): string {
-  return `chat-history:${workspace}`;
-}
-
 function toolResultText(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
@@ -73,7 +78,9 @@ function toolResultText(content: unknown): string {
 
 export function useChat({
   workspace,
+  cli = "claude",
   onTurnComplete,
+  onQuestionsDetected,
 }: UseChatOptions): UseChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
@@ -81,6 +88,10 @@ export function useChat({
   const [elapsed, setElapsed] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
   const toolNamesRef = useRef<Map<string, string>>(new Map());
+  const sessionResetRef = useRef(false);
+  const assistantTextRef = useRef("");
+  const onQuestionsDetectedRef = useRef(onQuestionsDetected);
+  onQuestionsDetectedRef.current = onQuestionsDetected;
 
   const FILE_WRITING_TOOLS = new Set(["Write", "Edit", "NotebookEdit"]);
 
@@ -97,44 +108,52 @@ export function useChat({
     return () => window.clearInterval(id);
   }, [busy]);
 
-  // Load persisted transcript whenever the workspace changes. We snapshot
-  // messages to localStorage on every change below, so reopening the same
-  // workspace restores the visible chat history. Pending state is dropped
-  // on rehydrate (no in-flight request can be resumed across reloads).
+  // Load persisted transcript from server whenever the workspace changes.
   useEffect(() => {
     if (!workspace) {
       setMessages([]);
       return;
     }
-    try {
-      const raw = localStorage.getItem(chatHistoryKey(workspace));
-      if (!raw) {
-        setMessages([]);
-        return;
-      }
-      const parsed = JSON.parse(raw) as ChatMessage[];
-      if (Array.isArray(parsed)) {
-        setMessages(parsed.map((m) => ({ ...m, pending: false })));
-      } else {
-        setMessages([]);
-      }
-    } catch {
-      setMessages([]);
-    }
+    let cancelled = false;
+    fetch(`/api/chat-history/${encodeURIComponent(workspace)}`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return (await r.json()) as { messages: ChatMessage[] };
+      })
+      .then(({ messages }) => {
+        if (cancelled) return;
+        if (Array.isArray(messages)) {
+          setMessages(messages.map((m) => ({ ...m, pending: false })));
+        } else {
+          setMessages([]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMessages([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [workspace]);
 
-  // Persist transcript on every change.
+  // Persist transcript to server on every change (debounced).
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!workspace) return;
-    try {
-      localStorage.setItem(
-        chatHistoryKey(workspace),
-        JSON.stringify(messages),
-      );
-    } catch {
-      // ignore quota errors
-    }
-  }, [messages, workspace]);
+    if (!workspace || messages.length === 0) return;
+    // Skip saving while a turn is in progress — wait for it to finish.
+    if (busy) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      fetch(`/api/chat-history/${encodeURIComponent(workspace)}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages }),
+      }).catch(() => {});
+    }, 500);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [messages, workspace, busy]);
 
   const updateAssistant = useCallback(
     (assistantId: string, mut: (m: ChatMessage) => ChatMessage) => {
@@ -162,12 +181,16 @@ export function useChat({
         userText = `${trimmed}\n\n<live_style_overrides>\nThe user has previewed these inline-style overrides on the selected element. Persist them in the source code (or further refine as requested):\n${overrideLines}\n</live_style_overrides>`;
       }
 
+      const elementRef: ElementRef | undefined = sentSelection
+        ? { tag: sentSelection.tag, id: sentSelection.id, classList: sentSelection.classList, selector: sentSelection.selector }
+        : undefined;
       const userMsg: ChatMessage = {
         id: newId(),
         role: "user",
         text: trimmed,
         thinking: "",
         toolCalls: [],
+        elementRef,
       };
       const assistantId = newId();
       const assistantMsg: ChatMessage = {
@@ -180,13 +203,35 @@ export function useChat({
       };
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setBusy(true);
-      setActivity("starting claude…");
+      setActivity("starting…");
       toolNamesRef.current.clear();
+      assistantTextRef.current = "";
+
+      // Snapshot current files for undo before the AI turn
+      try {
+        const snapRes = await fetch(
+          `/api/files/${encodeURIComponent(workspace)}`,
+        );
+        if (snapRes.ok) {
+          const snapData = (await snapRes.json()) as {
+            files: Record<string, string>;
+          };
+          pushSnapshot(workspace, {
+            userMessageId: userMsg.id,
+            files: snapData.files,
+            timestamp: Date.now(),
+          });
+        }
+      } catch {
+        // Non-critical — continue even if snapshot fails
+      }
 
       const ac = new AbortController();
       abortRef.current = ac;
 
       try {
+        const resetSession = sessionResetRef.current;
+        sessionResetRef.current = false;
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -195,6 +240,8 @@ export function useChat({
             message: userText,
             selectedElement: sentSelection,
             firstTurn,
+            resetSession,
+            cli,
           }),
           signal: ac.signal,
         });
@@ -236,6 +283,12 @@ export function useChat({
         setActivity("");
         abortRef.current = null;
         onTurnComplete();
+
+        // Auto-open brief tab when questions are detected
+        const parsed = parseClarifyingQuestions(assistantTextRef.current);
+        if (parsed && parsed.questions.length > 0) {
+          onQuestionsDetectedRef.current?.(assistantId, parsed.questions);
+        }
       }
 
       function handleEvent(evt: ChatStreamEvent, id: string) {
@@ -255,12 +308,23 @@ export function useChat({
           const t = evt.delta.text ?? "";
           if (t) {
             setActivity("writing reply…");
+            assistantTextRef.current += t;
             updateAssistant(id, (m) => ({ ...m, text: m.text + t }));
           }
           return;
         }
         if (evt.type === "assistant" && evt.message?.content) {
           for (const block of evt.message.content) {
+            // Capture text blocks from full message snapshots
+            if (block.type === "text" && block.text) {
+              const full = block.text;
+              if (full.length > assistantTextRef.current.length) {
+                assistantTextRef.current = full;
+              }
+              updateAssistant(id, (m) =>
+                m.text.length >= full.length ? m : { ...m, text: full },
+              );
+            }
             if (block.type === "thinking" && block.thinking) {
               const full = block.thinking;
               updateAssistant(id, (m) =>
@@ -316,6 +380,8 @@ export function useChat({
           setActivity("finishing…");
           const finalText = typeof evt.result === "string" ? evt.result : "";
           if (finalText) {
+            // Always capture the final complete text for question detection
+            assistantTextRef.current = finalText;
             updateAssistant(id, (m) =>
               m.text.trim().length > 0 ? m : { ...m, text: finalText },
             );
@@ -336,5 +402,46 @@ export function useChat({
 
   const stop = useCallback(() => abortRef.current?.abort(), []);
 
-  return { messages, busy, activity, elapsed, send, stop };
+  const undo = useCallback(async () => {
+    if (!workspace || busy) return;
+    const snapshot = popSnapshot(workspace);
+    if (!snapshot) return;
+
+    // Restore files from snapshot
+    try {
+      await fetch(
+        `/api/files/${encodeURIComponent(workspace)}/restore`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ files: snapshot.files }),
+        },
+      );
+    } catch {
+      // If restore fails, put snapshot back and bail
+      pushSnapshot(workspace, snapshot);
+      return;
+    }
+
+    // Remove messages from the undone turn onward
+    setMessages((prev) => {
+      const idx = prev.findIndex((m) => m.id === snapshot.userMessageId);
+      return idx >= 0 ? prev.slice(0, idx) : prev;
+    });
+
+    // Next send should start a fresh CLI session
+    sessionResetRef.current = true;
+
+    // Refresh preview
+    onTurnComplete();
+  }, [workspace, busy, onTurnComplete]);
+
+  const canUndo = useMemo(() => {
+    if (!workspace) return false;
+    return getSnapshots(workspace).length > 0;
+    // Re-evaluate when messages change (after undo removes messages)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace, messages]);
+
+  return { messages, busy, activity, elapsed, send, stop, undo, canUndo };
 }

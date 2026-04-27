@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Claude Code Studio",
-  description: "Local generative-UI playground driven by the Claude Code CLI.",
+  title: "CLI-D",
+  description: "Design with CLI — prototype UIs using AI coding agents.",
 };
 
 const themeBootstrap = `
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>

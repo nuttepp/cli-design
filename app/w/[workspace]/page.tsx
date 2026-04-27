@@ -25,6 +25,14 @@ export default function StudioPage() {
     ? decodeURIComponent(params.workspace)
     : null;
 
+  const [cliKey] = useState(() => {
+    if (typeof window === "undefined") return "claude";
+    try {
+      return localStorage.getItem("selected-cli") ?? "claude";
+    } catch { return "claude"; }
+  });
+  const cliName = { claude: "Claude Code", kilo: "Kilo Code", gemini: "Gemini CLI" }[cliKey] ?? cliKey;
+
   const [refreshKey, setRefreshKey] = useState(0);
   const [openFiles, setOpenFiles] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("preview");
@@ -37,9 +45,19 @@ export default function StudioPage() {
   const [liveOverrides, setLiveOverrides] = useState<Record<string, string>>({});
   const [brief, setBrief] = useState<BriefTab | null>(null);
 
+  const openBrief = useCallback(
+    (id: string, questions: ClarifyingQuestion[]) => {
+      setBrief({ id, questions });
+      setActiveTab("brief");
+    },
+    [],
+  );
+
   const chat = useChat({
     workspace,
+    cli: cliKey,
     onTurnComplete: () => setRefreshKey((k) => k + 1),
+    onQuestionsDetected: openBrief,
   });
 
   // Reset inspector state when the workspace changes; keep selection
@@ -76,13 +94,6 @@ export default function StudioPage() {
     setActiveTab((cur) => (cur === path ? "preview" : cur));
   };
 
-  const openBrief = useCallback(
-    (id: string, questions: ClarifyingQuestion[]) => {
-      setBrief({ id, questions });
-      setActiveTab("brief");
-    },
-    [],
-  );
   const closeBrief = useCallback(() => {
     setBrief(null);
     setActiveTab((cur) => (cur === "brief" ? "preview" : cur));
@@ -164,7 +175,7 @@ export default function StudioPage() {
             />
           </div>
         )}
-        <div className="min-h-0">
+        <div className="relative min-h-0">
           <PreviewPanel
             workspace={workspace}
             refreshKey={refreshKey}
@@ -201,12 +212,12 @@ export default function StudioPage() {
             <div className="min-h-0 overflow-hidden">
               {selectedElement ? (
                 <ElementEditorPanel
-                  workspace={workspace}
                   element={selectedElement}
                   overrides={liveOverrides}
                   onOverrideChange={setLiveOverrides}
                   onClose={clearSelection}
                   chat={chat}
+                  workspace={workspace}
                 />
               ) : (
                 <ChatPanel
@@ -215,6 +226,7 @@ export default function StudioPage() {
                   selectedElement={null}
                   onClearSelection={clearSelection}
                   onOpenBrief={openBrief}
+                  cliName={cliName}
                 />
               )}
             </div>

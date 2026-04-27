@@ -7,17 +7,21 @@ export const WORKSPACES_ROOT = path.resolve(process.cwd(), "workspaces");
 
 const NAME_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
-// Workspaces are plain HTML/CSS/JS static sites — no TS/JSX.
 const TEXT_EXTENSIONS = new Set([
   ".html",
   ".htm",
   ".css",
   ".js",
+  ".jsx",
   ".mjs",
   ".json",
   ".svg",
   ".md",
   ".txt",
+  ".vue",
+  ".svelte",
+  ".ts",
+  ".tsx",
 ]);
 
 const MAX_FILE_BYTES = 256 * 1024;
@@ -63,27 +67,27 @@ export async function listWorkspaces(): Promise<string[]> {
     .sort();
 }
 
-const STARTER_INDEX_HTML = `<!doctype html>
+const STARTER_INDEX_HTML = `<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Preview</title>
     <link rel="stylesheet" href="global.css" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="hello">
       <h1>Hello from your workspace</h1>
-      <p>Ask Claude in the chat panel to build something here.</p>
+      <p>Ask AI in the chat panel to build something here.</p>
     </main>
     <script src="script.js"></script>
   </body>
 </html>
 `;
 
-const STARTER_STYLE_CSS = `/*
- * style.css — your custom workspace styles.
+const STARTER_STYLES_CSS = `/*
+ * styles.css — your custom workspace styles.
  * Design system tokens come from global.css (do not edit that file).
  */
 
@@ -105,23 +109,27 @@ const STARTER_STYLE_CSS = `/*
 }
 `;
 
-const STARTER_SCRIPT_JS = `// Plain JavaScript — no bundler, no framework.
-// Anything you do here runs inside the live preview iframe.
-console.log("Workspace ready");
+const STARTER_SCRIPT_JS = `// script.js — your workspace JavaScript.
+// Add interactivity, DOM manipulation, or application logic here.
 `;
 
 const STARTER_README = `# Workspace
 
-Plain HTML / CSS / JavaScript. No bundler, no framework — everything you put
-in this folder is served directly to the live preview iframe.
+Plain HTML / CSS / JavaScript workspace. Everything here is served directly
+to the live preview iframe via Sandpack.
 
-- \`index.html\` is the entry; the preview renders this file.
-- \`global.css\` is generated from the Design System tab — do not edit by
-  hand. It exposes design tokens (colors, spacing, radii) as CSS variables.
-- \`style.css\` is for your custom workspace styles.
-- \`script.js\` is loaded by \`index.html\`.
+- \`index.html\` — main entry point rendered in the preview.
+- \`global.css\` — generated from the Design System tab — do not edit.
+- \`styles.css\` — your custom workspace styles.
+- \`script.js\` — your workspace JavaScript.
 
-Ask Claude in the chat panel to add features.
+For multi-page sites, create separate .html files (e.g. about.html) and
+link between them with <a href="about.html">. Use Web Components in
+components.js for shared UI (nav, footer, etc.).
+
+You can switch to React, Vue, or Svelte by asking AI in the chat panel.
+
+Ask AI in the chat panel to add features.
 `;
 
 export async function createWorkspace(name: string): Promise<void> {
@@ -138,7 +146,7 @@ export async function createWorkspace(name: string): Promise<void> {
   await Promise.all([
     fs.writeFile(path.join(dir, "index.html"), STARTER_INDEX_HTML, "utf8"),
     fs.writeFile(path.join(dir, "global.css"), buildGlobalCss(tokens), "utf8"),
-    fs.writeFile(path.join(dir, "style.css"), STARTER_STYLE_CSS, "utf8"),
+    fs.writeFile(path.join(dir, "styles.css"), STARTER_STYLES_CSS, "utf8"),
     fs.writeFile(path.join(dir, "script.js"), STARTER_SCRIPT_JS, "utf8"),
     fs.writeFile(path.join(dir, "README.md"), STARTER_README, "utf8"),
   ]);
@@ -206,6 +214,27 @@ export async function readWorkspaceFiles(name: string): Promise<FileMap> {
   return out;
 }
 
+export async function restoreWorkspaceFiles(
+  name: string,
+  files: FileMap,
+): Promise<void> {
+  const root = workspacePath(name);
+  const current = await readWorkspaceFiles(name);
+  // Delete files on disk that are not in the restore set
+  for (const relPath of Object.keys(current)) {
+    if (!(relPath in files)) {
+      const abs = path.resolve(root, "." + relPath);
+      if (abs.startsWith(root + path.sep)) {
+        await fs.unlink(abs).catch(() => {});
+      }
+    }
+  }
+  // Write all files from the snapshot
+  for (const [relPath, content] of Object.entries(files)) {
+    await writeWorkspaceFile(name, relPath, content);
+  }
+}
+
 export async function writeWorkspaceFile(
   name: string,
   relPath: string,
@@ -228,4 +257,25 @@ export async function writeWorkspaceFile(
   }
   await fs.mkdir(path.dirname(abs), { recursive: true });
   await fs.writeFile(abs, content, "utf8");
+}
+
+const CHAT_HISTORY_FILE = ".chat-history.json";
+
+export async function readChatHistory(name: string): Promise<unknown[]> {
+  const abs = path.join(workspacePath(name), CHAT_HISTORY_FILE);
+  try {
+    const raw = await fs.readFile(abs, "utf8");
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function writeChatHistory(
+  name: string,
+  messages: unknown[],
+): Promise<void> {
+  const abs = path.join(workspacePath(name), CHAT_HISTORY_FILE);
+  await fs.writeFile(abs, JSON.stringify(messages), "utf8");
 }

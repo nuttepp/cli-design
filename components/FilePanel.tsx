@@ -214,7 +214,7 @@ export function FilePanel({ workspace, refreshKey, onOpenFile }: Props) {
           />
           {fileCount === 0 && (
             <p className="px-3 py-2 text-xs text-slate-500">
-              Empty. Ask Claude to create something.
+              Empty. Ask AI to create something.
             </p>
           )}
         </div>

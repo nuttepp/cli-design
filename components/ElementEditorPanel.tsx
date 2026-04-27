@@ -186,18 +186,16 @@ export function ElementEditorPanel({
 
   const resetAll = () => onOverrideChange({});
 
-  const submitComment = async () => {
+  const submitComment = () => {
     const text = comment.trim();
     if (!text) return;
     setComment("");
-    await chat.send(text, {
+    // Close immediately so the user sees the chat while AI works
+    onClose();
+    void chat.send(text, {
       selectedElement: element,
       styleOverrides: Object.keys(overrides).length ? overrides : null,
     });
-    // Closing the editor returns the user to the chat view to watch the
-    // assistant work. Live inline overrides remain on the iframe until the
-    // post-turn refresh reloads with the persisted source.
-    onClose();
   };
 
   return (
@@ -262,49 +260,51 @@ export function ElementEditorPanel({
       </div>
 
       <form
-        className="border-t border-slate-800 p-3"
+        className="border-t border-slate-200 p-3 dark:border-slate-800"
         onSubmit={(e) => {
           e.preventDefault();
           void submitComment();
         }}
       >
-        <div className="mb-1.5 flex items-center gap-2 text-[10px] uppercase tracking-wide text-slate-500">
-          <span>Ask AI to edit</span>
-          {Object.keys(overrides).length > 0 && (
-            <span className="rounded bg-indigo-500/15 px-1.5 py-0.5 text-[10px] normal-case tracking-normal text-indigo-300">
-              {Object.keys(overrides).length} override
-              {Object.keys(overrides).length === 1 ? "" : "s"} attached
-            </span>
-          )}
-        </div>
-        <div className="flex gap-2">
+        <div className="relative rounded-md bg-slate-100 dark:bg-slate-900/60">
           <textarea
             value={comment}
-            onChange={(e) => setComment(e.target.value)}
+            onChange={(e) => {
+              setComment(e.target.value);
+              const el = e.target;
+              el.style.height = "auto";
+              el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 void submitComment();
               }
             }}
-            placeholder={
-              !workspace
-                ? "Pick a workspace first."
-                : "Describe what to change about this element…"
-            }
+            placeholder="Tell AI what to change…"
             disabled={!workspace || chat.busy}
-            rows={2}
-            className="flex-1 resize-none rounded-md border border-slate-700 bg-slate-950/50 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
+            rows={1}
+            className="block max-h-[200px] w-full resize-none overflow-y-auto rounded-md bg-transparent px-3 py-1.5 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           <button
             type="submit"
             disabled={!workspace || chat.busy || !comment.trim()}
-            className="self-end inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+            aria-label={chat.busy ? "Working" : "Send"}
+            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-indigo-400 transition hover:text-indigo-300 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {chat.busy && (
+            {chat.busy ? (
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+                className="h-4 w-4"
+              >
+                <path d="M3.105 2.289a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25H10a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.085l-1.414 4.926a.75.75 0 0 0 1.06.826l14-7a.75.75 0 0 0 0-1.342l-14-7a.75.75 0 0 0-.234-.056Z" />
+              </svg>
             )}
-            {chat.busy ? "Working" : "Send"}
           </button>
         </div>
       </form>
