@@ -19,6 +19,7 @@ export async function* spawnClaude(
     "acceptEdits",
     "--effort",
     "medium",
+    "--strict-mcp-config",
     "--append-system-prompt",
     SYSTEM_PROMPT,
   ];

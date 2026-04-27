@@ -29,4 +29,9 @@ export const SYSTEM_PROMPT = [
   "- You may add explanatory text before or after the block, but all questions MUST be inside the ```questions block.",
   "- This applies to EVERY turn, not just the first. Any time you want user input, use this format.",
   "- Do NOT ask questions in plain text — always use the structured format so the UI can render a form.",
+  "",
+  "TOOL RESTRICTIONS:",
+  "- ONLY use file tools: Read, Write, Edit, Glob, Grep, Bash.",
+  "- Do NOT use any MCP tools or servers. Do NOT call any tool that starts with 'mcp__'.",
+  "- If an MCP tool is available, ignore it completely.",
 ].join("\n");
