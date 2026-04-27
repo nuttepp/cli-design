@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { ElementEditorPanel } from "@/components/ElementEditorPanel";
-import { FilePanel } from "@/components/FilePanel";
 import { PreviewPanel, type BriefTab } from "@/components/PreviewPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
@@ -14,7 +13,6 @@ import { useChat } from "@/lib/useChat";
 
 const CHAT_MIN_WIDTH = 200;
 const CHAT_DEFAULT_WIDTH = 400;
-const FILE_PANEL_WIDTH = 260;
 const PREVIEW_MIN_WIDTH = 300;
 const RESIZER_WIDTH = 4;
 
@@ -115,7 +113,7 @@ export default function StudioPage() {
     if (!resizingRef.current) return;
     const desired = window.innerWidth - e.clientX;
     const max =
-      window.innerWidth - FILE_PANEL_WIDTH - RESIZER_WIDTH - PREVIEW_MIN_WIDTH;
+      window.innerWidth - RESIZER_WIDTH - PREVIEW_MIN_WIDTH;
     setChatWidth(Math.min(max, Math.max(CHAT_MIN_WIDTH, desired)));
   }, []);
 
@@ -126,12 +124,13 @@ export default function StudioPage() {
 
   return (
     <main className="flex h-screen flex-col">
-      <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-950">
+      <header className="flex items-center gap-3 border-b border-slate-200/60 bg-white/80 px-4 py-2 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/80">
         <Link
           href="/"
-          className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
         >
-          ← Workspaces
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+          Workspaces
         </Link>
         <WorkspaceTitle
           workspace={workspace}
@@ -151,9 +150,13 @@ export default function StudioPage() {
             }}
             aria-label={fullscreen ? "Exit fullscreen preview" : "Fullscreen preview"}
             title={fullscreen ? "Exit fullscreen preview" : "Fullscreen preview"}
-            className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
           >
-            {fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            {fullscreen ? (
+              <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Exit fullscreen</>
+            ) : (
+              <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>Fullscreen</>
+            )}
           </button>
         </div>
       </header>
@@ -163,18 +166,9 @@ export default function StudioPage() {
         style={{
           gridTemplateColumns: fullscreen
             ? "1fr"
-            : `${FILE_PANEL_WIDTH}px minmax(${PREVIEW_MIN_WIDTH}px, 1fr) ${RESIZER_WIDTH}px ${chatWidth}px`,
+            : `minmax(${PREVIEW_MIN_WIDTH}px, 1fr) ${RESIZER_WIDTH}px ${chatWidth}px`,
         }}
       >
-        {!fullscreen && (
-          <div className="min-h-0 overflow-hidden border-r border-slate-200 dark:border-slate-800">
-            <FilePanel
-              workspace={workspace}
-              refreshKey={refreshKey}
-              onOpenFile={openFile}
-            />
-          </div>
-        )}
         <div className="relative min-h-0">
           <PreviewPanel
             workspace={workspace}
@@ -192,6 +186,7 @@ export default function StudioPage() {
             brief={brief}
             onCloseBrief={closeBrief}
             onSubmitBrief={submitBrief}
+            onOpenFile={openFile}
           />
         </div>
         {!fullscreen && (
@@ -205,7 +200,7 @@ export default function StudioPage() {
               onPointerUp={onResizePointerUp}
               onPointerCancel={onResizePointerUp}
               onDoubleClick={() => setChatWidth(CHAT_DEFAULT_WIDTH)}
-              className="group relative cursor-col-resize touch-none select-none border-l border-slate-200 bg-slate-200 transition-colors hover:bg-indigo-500/60 dark:border-slate-800 dark:bg-slate-800"
+              className="group relative cursor-col-resize touch-none select-none border-l border-slate-200/60 bg-slate-100 transition-colors hover:bg-indigo-500/40 dark:border-slate-800/60 dark:bg-slate-800/60 dark:hover:bg-indigo-500/40"
             >
               <span className="absolute inset-y-0 -left-1 -right-1" />
             </div>
@@ -309,7 +304,7 @@ function WorkspaceTitle({
         type="button"
         onClick={startEdit}
         title="Rename workspace"
-        className="rounded px-1 text-sm font-semibold text-slate-900 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
+        className="rounded-lg px-2 py-0.5 text-sm font-semibold text-slate-900 transition hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
       >
         {workspace}
       </button>
@@ -336,12 +331,12 @@ function WorkspaceTitle({
         }}
         disabled={saving}
         autoFocus
-        className="rounded border border-slate-300 bg-white px-2 py-0.5 text-sm font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+        className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-sm font-semibold text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
       />
       <button
         type="submit"
         disabled={saving || !draft.trim()}
-        className="rounded border border-indigo-500 bg-indigo-600 px-2 py-0.5 text-xs text-white hover:bg-indigo-500 disabled:opacity-50"
+        className="rounded-lg border border-indigo-500 bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-50"
       >
         {saving ? "Saving…" : "Save"}
       </button>
@@ -349,7 +344,7 @@ function WorkspaceTitle({
         type="button"
         onClick={cancel}
         disabled={saving}
-        className="rounded border border-slate-300 px-2 py-0.5 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
       >
         Cancel
       </button>

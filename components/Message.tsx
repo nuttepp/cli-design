@@ -162,10 +162,10 @@ export function MessageView({
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[90%] space-y-2 rounded-lg px-3 py-2 text-sm ${
+        className={`max-w-[90%] space-y-2 rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
           isUser
             ? "bg-indigo-600 text-white"
-            : "bg-slate-100 text-slate-900 dark:bg-slate-800/60 dark:text-slate-100"
+            : "bg-white text-slate-900 ring-1 ring-slate-200/60 dark:bg-slate-800/60 dark:text-slate-100 dark:ring-slate-700/40"
         }`}
       >
         {isUser && message.elementRef && (

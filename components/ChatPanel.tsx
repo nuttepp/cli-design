@@ -49,8 +49,9 @@ export function ChatPanel({
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-900/40">
-      <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+    <div className="flex h-full flex-col bg-white/60 backdrop-blur-sm dark:bg-slate-900/40">
+      <div className="flex items-center gap-2 border-b border-slate-200/60 px-4 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-800/60 dark:text-slate-300">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Chat</span>
         {cliName && !busy && (
           <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
@@ -71,7 +72,7 @@ export function ChatPanel({
             <button
               type="button"
               onClick={stop}
-              className="rounded border border-slate-300 px-1.5 py-0.5 text-[10px] text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              className="rounded-md border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Stop
             </button>
@@ -87,6 +88,33 @@ export function ChatPanel({
             Select or create a workspace to start chatting.
           </p>
         )}
+        {workspace && messages.length === 0 && !busy && (
+          <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-cyan-500/10 dark:from-indigo-500/20 dark:via-purple-500/20 dark:to-cyan-500/20">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-500">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+              What would you like to build?
+            </p>
+            <p className="mt-1 max-w-[220px] text-xs text-slate-400 dark:text-slate-500">
+              Describe a UI below and the AI will generate it in the preview.
+            </p>
+            <div className="mt-5 flex flex-col items-center gap-2">
+              {["Build a landing page with hero and pricing section", "Create a dashboard with charts and sidebar navigation", "Design a portfolio with project cards and contact form"].map((hint) => (
+                <button
+                  key={hint}
+                  type="button"
+                  onClick={() => setInput(hint)}
+                  className="whitespace-nowrap rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-left text-xs text-slate-600 transition hover:border-indigo-300 hover:bg-indigo-50/50 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10"
+                >
+                  {hint}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {messages.map((m: ChatMessage) => (
           <MessageView
             key={m.id}
@@ -96,13 +124,13 @@ export function ChatPanel({
         ))}
       </div>
       <form
-        className="border-t border-slate-200 p-3 dark:border-slate-800"
+        className="border-t border-slate-200/60 p-3 dark:border-slate-800/60"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
         }}
       >
-        <div className="relative rounded-md bg-slate-100 dark:bg-slate-900/60">
+        <div className="relative rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/80">
           <textarea
             ref={textareaRef}
             value={input}
@@ -120,13 +148,13 @@ export function ChatPanel({
             }
             disabled={!workspace || busy}
             rows={1}
-            className="block max-h-[200px] w-full resize-none overflow-y-auto rounded-md bg-transparent px-3 py-1.5 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50 dark:text-slate-100 dark:placeholder:text-slate-500"
+            className="block max-h-[200px] w-full resize-none overflow-y-auto rounded-xl bg-transparent px-3 py-2 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
           <button
             type="submit"
             disabled={!workspace || busy || !input.trim()}
             aria-label={busy ? "Working" : "Send"}
-            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-indigo-400 transition hover:text-indigo-300 disabled:cursor-not-allowed disabled:opacity-40"
+            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy ? (
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />

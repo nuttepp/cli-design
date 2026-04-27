@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { DesignSystem } from "./DesignSystem";
+import { FilePanel } from "./FilePanel";
 import { QuestionsForm } from "./QuestionsForm";
 import { CodeEditor } from "./CodeEditor";
 import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
@@ -45,6 +46,7 @@ interface Props {
   brief?: BriefTab | null;
   onCloseBrief?: () => void;
   onSubmitBrief?: (text: string) => void;
+  onOpenFile?: (path: string) => void;
 }
 
 const SAVE_DEBOUNCE_MS = 5000;
@@ -80,6 +82,7 @@ export function PreviewPanel({
   brief = null,
   onCloseBrief,
   onSubmitBrief,
+  onOpenFile,
 }: Props) {
   const { theme } = useTheme();
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -280,21 +283,21 @@ export function PreviewPanel({
 
   if (!workspace) {
     return (
-      <div className="flex h-full items-center justify-center bg-white text-sm text-slate-500 dark:bg-slate-950">
+      <div className="flex h-full items-center justify-center bg-white/80 text-sm text-slate-500 backdrop-blur-sm dark:bg-slate-950/80">
         No workspace selected.
       </div>
     );
   }
   if (error) {
     return (
-      <div className="flex h-full items-center justify-center bg-white p-4 text-sm text-red-500 dark:bg-slate-950 dark:text-red-400">
+      <div className="flex h-full items-center justify-center bg-white/80 p-4 text-sm text-red-500 backdrop-blur-sm dark:bg-slate-950/80 dark:text-red-400">
         Failed to load workspace files: {error}
       </div>
     );
   }
   if (!files || !sandpackFiles) {
     return (
-      <div className="flex h-full items-center justify-center bg-white text-sm text-slate-500 dark:bg-slate-950">
+      <div className="flex h-full items-center justify-center bg-white/80 text-sm text-slate-500 backdrop-blur-sm dark:bg-slate-950/80">
         Loading…
       </div>
     );
@@ -303,19 +306,26 @@ export function PreviewPanel({
   return (
     <div className="flex h-full flex-col">
       {!hideTabs && (
-        <div className="flex items-end gap-1 overflow-x-auto border-b border-slate-200 bg-white px-2 pt-2 dark:border-slate-800 dark:bg-slate-950">
+        <div className="flex items-end gap-1 overflow-x-auto border-b border-slate-200/60 bg-white/80 px-2 pt-2 backdrop-blur-sm dark:border-slate-800/60 dark:bg-slate-950/80">
+          <ChromeTab
+            active={activeTab === "files"}
+            onClick={() => onSelectTab("files")}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z" /></svg>
+            <span>Files</span>
+          </ChromeTab>
           <ChromeTab
             active={activeTab === "preview"}
             onClick={() => onSelectTab("preview")}
           >
-            <span className="text-emerald-400">●</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             <span>Preview</span>
           </ChromeTab>
           <ChromeTab
             active={activeTab === "design-system"}
             onClick={() => onSelectTab("design-system")}
           >
-            <span className="text-indigo-400">●</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
             <span>Design System</span>
           </ChromeTab>
           {brief && (
@@ -355,10 +365,10 @@ export function PreviewPanel({
                     : "Inspect element (click in preview)"
                 }
                 aria-pressed={inspectMode}
-                className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-medium shadow-sm transition ${
                   inspectMode
-                    ? "border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-500"
-                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                    ? "border-indigo-500 bg-indigo-600 text-white hover:bg-indigo-500"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-700"
                 }`}
               >
                 <svg
@@ -382,6 +392,16 @@ export function PreviewPanel({
       )}
 
       <div ref={previewContainerRef} className="relative min-h-0 flex-1 bg-white dark:bg-slate-950">
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{ display: activeTab === "files" ? "block" : "none" }}
+        >
+          <FilePanel
+            workspace={workspace}
+            refreshKey={refreshKey}
+            onOpenFile={onOpenFile}
+          />
+        </div>
         <div
           className="absolute inset-0"
           style={{ display: activeTab === "preview" ? "block" : "none" }}
@@ -468,10 +488,10 @@ function ChromeTab({
   return (
     <div
       title={title}
-      className={`group flex shrink-0 items-center gap-2 rounded-t-md border border-b-0 px-3 py-1.5 text-xs ${
+      className={`group flex shrink-0 items-center gap-2 rounded-t-lg border border-b-0 px-3 py-1.5 text-xs font-medium transition ${
         active
-          ? "border-slate-200 bg-slate-100 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
-          : "border-transparent bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-900/40 dark:text-slate-400 dark:hover:bg-slate-900/70"
+          ? "border-slate-200/60 bg-white text-slate-900 shadow-sm dark:border-slate-700/60 dark:bg-slate-900 dark:text-slate-100"
+          : "border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-300"
       }`}
     >
       <button

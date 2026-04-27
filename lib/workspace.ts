@@ -120,9 +120,25 @@ const STARTER_INDEX_HTML = `<!DOCTYPE html>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="hello">
-      <h1>Hello from your workspace</h1>
-      <p>Ask AI in the chat panel to build something here.</p>
+    <main class="hero">
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <div class="hero-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <h1>Ready to build</h1>
+        <p>Describe what you want in the chat panel and AI will create it here.</p>
+        <p class="try-label">Try asking</p>
+        <div class="hero-prompts">
+          <div class="prompt">&ldquo;Build a landing page with hero and pricing section&rdquo;</div>
+          <div class="prompt">&ldquo;Create a dashboard with charts and sidebar navigation&rdquo;</div>
+          <div class="prompt">&ldquo;Design a portfolio with project cards and contact form&rdquo;</div>
+        </div>
+      </div>
     </main>
     <script src="script.js"></script>
   </body>
@@ -134,21 +150,111 @@ const STARTER_STYLES_CSS = `/*
  * Design system tokens come from global.css (do not edit that file).
  */
 
-.hello {
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
   min-height: 100vh;
-  display: grid;
-  place-items: center;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hero-glow {
+  position: absolute;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.6; }
+  50% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+}
+
+.hero-content {
+  position: relative;
   text-align: center;
+  max-width: 480px;
+  padding: 2rem;
 }
 
-.hello h1 {
-  font-size: 2rem;
-  margin: 0 0 0.5rem;
+.hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2));
+  border: 1px solid rgba(99,102,241,0.3);
+  margin-bottom: 1.5rem;
+  color: #818cf8;
 }
 
-.hello p {
-  margin: 0;
-  color: var(--color-text-muted);
+.hero-content h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, #e2e8f0, #818cf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.75rem;
+}
+
+.hero-content p {
+  font-size: 1.05rem;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+.try-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin-bottom: 0.75rem;
+}
+
+.hero-prompts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.prompt {
+  padding: 0.625rem 1rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  text-align: left;
+  background: rgba(99,102,241,0.08);
+  border: 1px solid rgba(99,102,241,0.15);
+  color: #cbd5e1;
+  transition: all 0.2s;
+}
+
+.prompt:hover {
+  background: rgba(99,102,241,0.15);
+  border-color: rgba(99,102,241,0.3);
+  color: #e2e8f0;
 }
 `;
 

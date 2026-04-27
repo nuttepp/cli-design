@@ -90,14 +90,14 @@ function FileTree({
         type="button"
         onClick={() => onSelect(node.path)}
         onDoubleClick={() => onOpen?.(node.path)}
-        className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-xs ${
+        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition ${
           selected === node.path
-            ? "bg-indigo-500/20 text-indigo-700 dark:bg-indigo-600/30 dark:text-indigo-100"
-            : "text-slate-700 hover:bg-slate-200/60 dark:text-slate-300 dark:hover:bg-slate-800/60"
+            ? "bg-indigo-500/15 text-indigo-700 shadow-sm dark:bg-indigo-500/20 dark:text-indigo-200"
+            : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800/60"
         }`}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
-        <span className="opacity-60">{fileIcon(node.name)}</span>
+        <span className="w-4 text-center opacity-60">{fileIcon(node.name)}</span>
         <span className="truncate">{node.name}</span>
       </button>
     );
@@ -126,7 +126,7 @@ function FileTree({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1 rounded px-2 py-1 text-left text-xs text-slate-600 hover:bg-slate-200/60 dark:text-slate-400 dark:hover:bg-slate-800/60"
+        className="flex w-full items-center gap-1 rounded-lg px-2 py-1.5 text-left text-xs font-medium text-slate-600 transition hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800/60"
         style={{ paddingLeft: `${depth * 12 + 4}px` }}
       >
         <span className="w-3 text-center">{open ? "▾" : "▸"}</span>
@@ -187,8 +187,9 @@ export function FilePanel({ workspace, refreshKey, onOpenFile }: Props) {
   const fileCount = files ? Object.keys(files).length : 0;
 
   return (
-    <div className="flex h-full flex-col bg-slate-50 dark:bg-slate-950/60">
-      <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400">
+    <div className="flex h-full flex-col bg-white/60 backdrop-blur-sm dark:bg-slate-950/60">
+      <div className="flex items-center gap-2 border-b border-slate-200/60 px-3 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-800/60 dark:text-slate-300">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-6l-2-2H5a2 2 0 0 0-2 2z" /></svg>
         <span>Files</span>
         {workspace && (
           <span className="ml-auto text-xs text-slate-500">
