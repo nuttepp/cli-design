@@ -4,19 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
-
-interface CliStatus {
-  installed: boolean;
-  version: string | null;
-  ready: boolean;
-  authInfo: string | null;
-}
-
-interface HealthStatus {
-  claude: CliStatus;
-  kilo: CliStatus;
-  gemini: CliStatus;
-}
+import { useCliHealth } from "@/lib/useCliHealth";
+import type { HealthStatus } from "@/lib/useCliHealth";
 
 type CliKey = keyof HealthStatus;
 
@@ -32,7 +21,7 @@ export default function HomePage() {
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const { health, loading: healthLoading, refreshHealth } = useCliHealth();
   const [selectedCli, setSelectedCli] = useState<CliKey | null>(null);
 
   const refresh = async () => {
@@ -47,19 +36,15 @@ export default function HomePage() {
 
   useEffect(() => {
     void refresh();
-    fetch("/api/health")
-      .then(async (r) => (await r.json()) as HealthStatus)
-      .then((h) => {
-        setHealth(h);
-        // Auto-select the first ready CLI
-        const firstReady = CLI_LIST.find((c) => h[c.key].ready);
-        if (firstReady) setSelectedCli(firstReady.key);
-      })
-      .catch(() => {
-        const empty: CliStatus = { installed: false, version: null, ready: false, authInfo: null };
-        setHealth({ claude: empty, kilo: empty, gemini: empty });
-      });
   }, []);
+
+  // Auto-select first ready CLI when health data arrives
+  useEffect(() => {
+    if (health) {
+      const firstReady = CLI_LIST.find((c) => health[c.key].ready);
+      if (firstReady) setSelectedCli(firstReady.key);
+    }
+  }, [health]);
 
   // Persist selected CLI to localStorage so workspace page can read it
   useEffect(() => {
@@ -142,9 +127,28 @@ export default function HomePage() {
         <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
           {/* Left Column — CLI Selection */}
           <div>
-            <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Select a CLI agent
-            </h3>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Select a CLI agent
+              </h3>
+              <button
+                type="button"
+                onClick={refreshHealth}
+                disabled={healthLoading}
+                aria-label="Re-check CLI status"
+                title="Re-check CLI status"
+                className="rounded-md p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              >
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  className={healthLoading ? "animate-spin" : ""}
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              </button>
+            </div>
             <div className="space-y-2">
               {CLI_LIST.map((cli) => {
                 const status = health?.[cli.key];
