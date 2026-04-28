@@ -246,7 +246,7 @@ export function MessageView({
       {!isUser && (timeStr || message.duration) && (
         <div className="mb-1 flex shrink-0 flex-col items-start gap-0.5">
           {message.duration != null && !message.pending && (
-            <span className="text-[10px] text-indigo-400 dark:text-indigo-400">{message.duration! >= 60 ? `${(message.duration! / 60).toFixed(1)}m` : `${message.duration}s`}</span>
+            <span className="text-[10px] text-indigo-400 dark:text-indigo-400">{message.duration! >= 60 ? `${Math.floor(message.duration! / 60)} mins ${Math.round(message.duration! % 60)} sec` : `${message.duration}s`}</span>
           )}
           {timeStr && (
             <span className="text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
