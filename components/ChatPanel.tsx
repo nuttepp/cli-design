@@ -1,10 +1,43 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MessageView, type ChatMessage } from "./Message";
 import type { UseChatResult } from "@/lib/useChat";
 import type { SelectedElement } from "@/lib/previewInspector";
 import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
+
+const PROMPT_SUGGESTIONS = [
+  "Build a landing page with hero and pricing section",
+  "Create a dashboard with charts and sidebar navigation",
+  "Design a portfolio with project cards and contact form",
+  "Make a blog layout with featured posts and categories",
+  "Build a login page with social sign-in buttons",
+  "Create a settings page with tabs and form inputs",
+  "Design a product card grid with filters and sorting",
+  "Build a chat interface with message bubbles and input",
+  "Create a file upload page with drag-and-drop zone",
+  "Design a calendar view with events and navigation",
+  "Build a kanban board with draggable columns",
+  "Create a notification center with grouped alerts",
+  "Design a user profile page with avatar and stats",
+  "Build a checkout flow with cart summary and payment",
+  "Create a music player with playlist and controls",
+  "Design a weather widget with forecast cards",
+  "Build a recipe page with ingredients and steps",
+  "Create a timeline component with milestones",
+  "Design a pricing table with feature comparison",
+  "Build a search results page with filters sidebar",
+  "Create a multi-step form with progress indicator",
+  "Design a photo gallery with lightbox preview",
+  "Build a task list with checkboxes and priorities",
+  "Create a navigation bar with dropdown menus",
+  "Design a testimonial carousel with avatars",
+  "Build a FAQ accordion with smooth animations",
+  "Create a stats dashboard with KPI cards and charts",
+  "Design an email template with header and footer",
+  "Build a social media feed with posts and reactions",
+  "Create a 404 error page with illustration",
+];
 
 interface Props {
   workspace: string | null;
@@ -24,6 +57,10 @@ export function ChatPanel({
   cliName,
 }: Props) {
   const [input, setInput] = useState("");
+  const randomPrompts = useMemo(() => {
+    const shuffled = [...PROMPT_SUGGESTIONS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3);
+  }, []);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -102,7 +139,7 @@ export function ChatPanel({
               Describe a UI below and the AI will generate it in the preview.
             </p>
             <div className="mt-5 flex flex-col items-center gap-2">
-              {["Build a landing page with hero and pricing section", "Create a dashboard with charts and sidebar navigation", "Design a portfolio with project cards and contact form"].map((hint) => (
+              {randomPrompts.map((hint) => (
                 <button
                   key={hint}
                   type="button"

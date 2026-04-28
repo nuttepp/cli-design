@@ -112,36 +112,24 @@ export async function listWorkspacesWithInfo(): Promise<WorkspaceInfo[]> {
 
 const STARTER_INDEX_HTML = `<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Preview</title>
-    <link rel="stylesheet" href="global.css" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <main class="hero">
-      <div class="hero-glow"></div>
-      <div class="hero-content">
-        <div class="hero-icon">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-        </div>
-        <h1>Ready to build</h1>
-        <p>Describe what you want in the chat panel and AI will create it here.</p>
-        <p class="try-label">Try asking</p>
-        <div class="hero-prompts">
-          <div class="prompt">&ldquo;Build a landing page with hero and pricing section&rdquo;</div>
-          <div class="prompt">&ldquo;Create a dashboard with charts and sidebar navigation&rdquo;</div>
-          <div class="prompt">&ldquo;Design a portfolio with project cards and contact form&rdquo;</div>
-        </div>
-      </div>
-    </main>
-    <script src="script.js"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Preview</title>
+<link rel="stylesheet" href="global.css" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="src/data.jsx"></script>
+<script type="text/babel" src="src/components.jsx"></script>
+<script type="text/babel" src="src/app.jsx"></script>
+</body>
 </html>
 `;
 
@@ -150,15 +138,42 @@ const STARTER_STYLES_CSS = `/*
  * Design system tokens come from global.css (do not edit that file).
  */
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+/* ── Reset & Base ─────────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0f172a;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #818cf8;
+  --accent-rgb: 99,102,241;
+  --surface: rgba(99,102,241,0.08);
+  --border: rgba(99,102,241,0.15);
+  --radius: 12px;
+}
 
 body {
   min-height: 100vh;
-  background: #0f172a;
-  color: #e2e8f0;
+  background: var(--bg);
+  color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
+#root { min-height: 100vh; }
+
+/* ── Utilities ────────────────────────────────────── */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.text-center { text-align: center; }
+.gap-sm { gap: 0.5rem; }
+.gap-md { gap: 1rem; }
+.gap-lg { gap: 1.5rem; }
+
+/* ── Hero Section ─────────────────────────────────── */
 .hero {
   position: relative;
   min-height: 100vh;
@@ -173,11 +188,12 @@ body {
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(var(--accent-rgb),0.15) 0%, transparent 70%);
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   animation: pulse 4s ease-in-out infinite;
+  pointer-events: none;
 }
 
 @keyframes pulse {
@@ -192,93 +208,194 @@ body {
   padding: 2rem;
 }
 
-.hero-icon {
+/* ── Components ───────────────────────────────────── */
+.icon-box {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 80px;
   height: 80px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2));
-  border: 1px solid rgba(99,102,241,0.3);
+  background: linear-gradient(135deg, rgba(var(--accent-rgb),0.2), rgba(168,85,247,0.2));
+  border: 1px solid rgba(var(--accent-rgb),0.3);
   margin-bottom: 1.5rem;
-  color: #818cf8;
+  color: var(--accent);
 }
 
-.hero-content h1 {
+.heading-gradient {
   font-size: 2.5rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  background: linear-gradient(135deg, #e2e8f0, #818cf8);
+  background: linear-gradient(135deg, var(--text), var(--accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   margin-bottom: 0.75rem;
 }
 
-.hero-content p {
+.text-muted {
   font-size: 1.05rem;
-  color: #94a3b8;
+  color: var(--muted);
   line-height: 1.6;
-  margin-bottom: 1.5rem;
 }
 
-.try-label {
+.label {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #64748b;
-  margin-bottom: 0.75rem;
 }
 
-.hero-prompts {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  max-width: 420px;
-  margin: 0 auto;
-}
-
-.prompt {
+/* ── Card ─────────────────────────────────────────── */
+.card {
   padding: 0.625rem 1rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  text-align: left;
-  background: rgba(99,102,241,0.08);
-  border: 1px solid rgba(99,102,241,0.15);
+  border-radius: var(--radius);
+  background: var(--surface);
+  border: 1px solid var(--border);
   color: #cbd5e1;
   transition: all 0.2s;
 }
 
-.prompt:hover {
-  background: rgba(99,102,241,0.15);
-  border-color: rgba(99,102,241,0.3);
-  color: #e2e8f0;
+.card:hover {
+  background: rgba(var(--accent-rgb),0.15);
+  border-color: rgba(var(--accent-rgb),0.3);
+  color: var(--text);
+}
+
+.card.clickable { cursor: pointer; }
+
+/* ── Button ───────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:hover {
+  background: rgba(var(--accent-rgb),0.2);
+  border-color: rgba(var(--accent-rgb),0.4);
+}
+
+.btn-primary {
+  background: rgba(var(--accent-rgb),0.9);
+  border-color: transparent;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: rgba(var(--accent-rgb),1);
 }
 `;
 
-const STARTER_SCRIPT_JS = `// script.js — your workspace JavaScript.
-// Add interactivity, DOM manipulation, or application logic here.
+const STARTER_DATA_JSX = `// src/data.jsx — Constants, seed data, and utility functions.
+
+const PROMPTS = [
+  "Build a landing page with hero and pricing section",
+  "Create a dashboard with charts and sidebar navigation",
+  "Design a portfolio with project cards and contact form",
+];
+
+// Expose for cross-file access
+window.PROMPTS = PROMPTS;
+`;
+
+const STARTER_COMPONENTS_JSX = `// src/components.jsx — Reusable UI primitives.
+
+const { createElement: h } = React;
+
+function Icon({ children, size = 48 }) {
+  return (
+    <div className="icon-box">
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </svg>
+    </div>
+  );
+}
+
+function Card({ children, className = "", onClick }) {
+  return (
+    <div
+      className={\`card \${onClick ? "clickable" : ""} \${className}\`}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Button({ children, variant = "default", onClick }) {
+  const cls = variant === "primary" ? "btn btn-primary" : "btn";
+  return (
+    <button className={cls} onClick={onClick}>{children}</button>
+  );
+}
+
+// Expose for cross-file access
+window.Icon = Icon;
+window.Card = Card;
+window.Button = Button;
+`;
+
+const STARTER_APP_JSX = `// src/app.jsx — Root component. This is the main entry point.
+
+const { Icon, Card, Button, PROMPTS } = window;
+
+function App() {
+  return (
+    <main className="hero">
+      <div className="hero-glow" />
+      <div className="hero-content">
+        <Icon>
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+          <line x1="8" y1="21" x2="16" y2="21" />
+          <line x1="12" y1="17" x2="12" y2="21" />
+        </Icon>
+        <h1 className="heading-gradient">Ready to build</h1>
+        <p className="text-muted">
+          Describe what you want in the chat panel and AI will create it here.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 `;
 
 const STARTER_README = `# Workspace
 
-Plain HTML / CSS / JavaScript workspace. Everything here is served directly
-to the live preview iframe via Sandpack.
+React workspace using CDN-loaded React 18 + Babel for JSX transpilation.
+Everything is served to the live preview via Sandpack.
 
-- \`index.html\` — main entry point rendered in the preview.
+## File Structure
+
+- \`index.html\` — entry point, loads React CDN and sources JSX files.
 - \`global.css\` — generated from the Design System tab — do not edit.
-- \`styles.css\` — your custom workspace styles.
-- \`script.js\` — your workspace JavaScript.
+- \`styles.css\` — custom styles with CSS variables for theming.
+- \`src/app.jsx\` — root App component, main layout and pages.
+- \`src/components.jsx\` — reusable UI primitives (Icon, Card, Button).
+- \`src/data.jsx\` — constants, seed data, and utility functions.
 
-For multi-page sites, create separate .html files (e.g. about.html) and
-link between them with <a href="about.html">. Use Web Components in
-components.js for shared UI (nav, footer, etc.).
+## How It Works
 
-You can switch to React, Vue, or Svelte by asking AI in the chat panel.
+Components are exported to \`window\` so they can be used across files.
+Add new files in \`src/\` and source them from \`index.html\` with
+\`<script type="text/babel" src="src/yourfile.jsx"></script>\`.
 
-Ask AI in the chat panel to add features.
+Ask AI in the chat panel to add features or create new pages.
 `;
 
 export async function createWorkspace(name: string): Promise<void> {
@@ -292,11 +409,15 @@ export async function createWorkspace(name: string): Promise<void> {
     throw e;
   }
   const tokens = await loadTokens();
+  const srcDir = path.join(dir, "src");
+  await fs.mkdir(srcDir, { recursive: true });
   await Promise.all([
     fs.writeFile(path.join(dir, "index.html"), STARTER_INDEX_HTML, "utf8"),
     fs.writeFile(path.join(dir, "global.css"), buildGlobalCss(tokens), "utf8"),
     fs.writeFile(path.join(dir, "styles.css"), STARTER_STYLES_CSS, "utf8"),
-    fs.writeFile(path.join(dir, "script.js"), STARTER_SCRIPT_JS, "utf8"),
+    fs.writeFile(path.join(srcDir, "data.jsx"), STARTER_DATA_JSX, "utf8"),
+    fs.writeFile(path.join(srcDir, "components.jsx"), STARTER_COMPONENTS_JSX, "utf8"),
+    fs.writeFile(path.join(srcDir, "app.jsx"), STARTER_APP_JSX, "utf8"),
     fs.writeFile(path.join(dir, "README.md"), STARTER_README, "utf8"),
   ]);
 }

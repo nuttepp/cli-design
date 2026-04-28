@@ -174,7 +174,7 @@ export function MessageView({
 
   return (
     <div className={`flex items-end gap-2 ${isUser ? "justify-end" : "justify-start"}`}>
-      {!isUser && timeStr && (
+      {isUser && timeStr && (
         <span className="mb-1 shrink-0 text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
       )}
       <div
@@ -241,7 +241,7 @@ export function MessageView({
           </button>
         )}
       </div>
-      {isUser && timeStr && (
+      {!isUser && timeStr && (
         <span className="mb-1 shrink-0 text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
       )}
     </div>
