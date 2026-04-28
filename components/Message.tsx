@@ -35,6 +35,7 @@ export interface ChatMessage {
   pending?: boolean;
   elementRef?: ElementRef;
   timestamp?: number;
+  duration?: number;
 }
 
 function describeTool(call: ToolCall): string {
@@ -241,8 +242,15 @@ export function MessageView({
           </button>
         )}
       </div>
-      {!isUser && timeStr && (
-        <span className="mb-1 shrink-0 text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
+      {!isUser && (timeStr || message.duration) && (
+        <div className="mb-1 flex shrink-0 flex-col items-start gap-0.5">
+          {message.duration != null && !message.pending && (
+            <span className="text-[10px] text-indigo-400 dark:text-indigo-400">{message.duration}s</span>
+          )}
+          {timeStr && (
+            <span className="text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
+          )}
+        </div>
       )}
     </div>
   );

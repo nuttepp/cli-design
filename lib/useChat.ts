@@ -283,7 +283,11 @@ export function useChat({
           text: m.text + `\n\n[error: ${message}]`,
         }));
       } finally {
-        updateAssistant(assistantId, (m) => ({ ...m, pending: false }));
+        updateAssistant(assistantId, (m) => ({
+          ...m,
+          pending: false,
+          duration: m.timestamp ? Math.round((Date.now() - m.timestamp) / 1000) : undefined,
+        }));
         setBusy(false);
         setActivity("");
         abortRef.current = null;
@@ -398,11 +402,12 @@ export function useChat({
           updateAssistant(id, (m) => ({
             ...m,
             text: m.text + `\n\n[error: ${msg}]`,
+            pending: false,
           }));
         }
       }
     },
-    [busy, messages.length, onTurnComplete, updateAssistant, workspace],
+    [busy, cli, messages.length, model, onTurnComplete, updateAssistant, workspace],
   );
 
   const stop = useCallback(() => abortRef.current?.abort(), []);

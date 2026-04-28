@@ -54,6 +54,7 @@ function normalizeKiloEvent(raw: KiloEvent): CliEvent | null {
       };
 
     case "thinking":
+    case "reasoning":
       return {
         type: "stream_event",
         delta: {
@@ -105,13 +106,12 @@ function normalizeKiloEvent(raw: KiloEvent): CliEvent | null {
 export async function* spawnKilo(
   opts: SpawnCliOptions,
 ): AsyncGenerator<CliEvent, void, void> {
-  // Kilo takes message as positional args, no stdin.
-  // Prepend system prompt as context.
+  // Prepend system prompt as context, pipe via stdin.
   const fullMessage = `<system_instructions>\n${SYSTEM_PROMPT}\n</system_instructions>\n\n${opts.message}`;
 
   const args: string[] = [
     "run",
-    fullMessage,
+    "-",
     "--format",
     "json",
     "--auto",
@@ -129,9 +129,11 @@ export async function* spawnKilo(
   const proc = spawn("kilo", args, {
     cwd: opts.cwd,
     env: process.env,
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe"],
     shell: process.platform === "win32",
   });
+
+  proc.stdin!.end(fullMessage);
 
   for await (const line of streamJsonLines(proc, opts.signal)) {
     try {

@@ -161,7 +161,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const sessionKey = `${body.workspace}:${cli}`;
+  const sessionKey = `${body.workspace}:${cli}${model ? `:${model}` : ""}`;
   const sessionId = body.resetSession ? undefined : getSession(sessionKey);
   const adapter = getAdapter(cli);
 
@@ -202,6 +202,7 @@ export async function POST(req: Request) {
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        console.error(`[chat] CLI error (${cli}${model ? ` model=${model}` : ""}):`, message);
         send({ type: "error", error: message });
       } finally {
         controller.close();

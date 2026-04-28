@@ -105,6 +105,8 @@ export function PreviewPanel({
     }
     let cancelled = false;
     setError(null);
+    setEdits({});
+    setDirty({});
     fetch(`/api/files/${encodeURIComponent(workspace)}`)
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
