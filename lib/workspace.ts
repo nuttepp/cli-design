@@ -98,7 +98,7 @@ export async function listWorkspacesWithInfo(): Promise<WorkspaceInfo[]> {
     .map((e) => e.name)
     .sort();
 
-  return Promise.all(
+  const results = await Promise.all(
     dirs.map(async (name) => {
       const dir = path.join(WORKSPACES_ROOT, name);
       const [stat, fileCount] = await Promise.all([
@@ -108,6 +108,7 @@ export async function listWorkspacesWithInfo(): Promise<WorkspaceInfo[]> {
       return { name, fileCount, lastModified: stat.mtime.toISOString() };
     }),
   );
+  return results.sort((a, b) => b.lastModified.localeCompare(a.lastModified));
 }
 
 const STARTER_INDEX_HTML = `<!DOCTYPE html>

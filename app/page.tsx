@@ -429,7 +429,6 @@ export default function HomePage() {
                   <div className="space-y-2">
                     {list.map((ws) => {
                       const meta = clientMeta[ws.name];
-                      const cliInfo = meta ? CLI_LIST.find((c) => c.key === meta.cliUsed) : null;
 
                       return (
                         <div key={ws.name} className="group relative">
@@ -439,14 +438,14 @@ export default function HomePage() {
                               onClick={() => handleOpenWorkspace(ws.name)}
                               className="flex w-full items-center gap-3 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 text-left backdrop-blur-sm transition hover:border-indigo-500/40 hover:shadow-md dark:border-slate-800 dark:bg-slate-900/60 dark:hover:border-indigo-500/40"
                             >
-                              <WorkspaceCardContent ws={ws} meta={meta} cliInfo={cliInfo} />
+                              <WorkspaceCardContent ws={ws} meta={meta} />
                             </button>
                           ) : (
                             <div
                               title="Select a CLI agent first"
                               className="flex cursor-not-allowed items-center gap-3 rounded-xl border border-slate-200/80 bg-white/80 px-4 py-3 opacity-50 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/60"
                             >
-                              <WorkspaceCardContent ws={ws} meta={meta} cliInfo={cliInfo} />
+                              <WorkspaceCardContent ws={ws} meta={meta} />
                             </div>
                           )}
                           <button
@@ -483,11 +482,9 @@ export default function HomePage() {
 function WorkspaceCardContent({
   ws,
   meta,
-  cliInfo,
 }: {
   ws: WorkspaceInfo;
   meta: WorkspaceMeta | undefined;
-  cliInfo: (typeof CLI_LIST)[number] | null | undefined;
 }) {
   return (
     <>
@@ -500,20 +497,7 @@ function WorkspaceCardContent({
           <span>{ws.fileCount} file{ws.fileCount === 1 ? "" : "s"}</span>
           <span>Modified {relativeTime(ws.lastModified)}</span>
           {meta && (
-            <>
-              <span>Opened {relativeTime(meta.lastOpened)}</span>
-              {cliInfo && (
-                <span className="inline-flex items-center gap-1.5">
-                  <img
-                    src={cliInfo.logo}
-                    alt=""
-                    className="h-3 w-3 object-contain"
-                    onError={(e) => (e.currentTarget.style.display = "none")}
-                  />
-                  {cliInfo.label}
-                </span>
-              )}
-            </>
+            <span>Opened {relativeTime(meta.lastOpened)}</span>
           )}
         </div>
       </div>

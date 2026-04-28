@@ -39,20 +39,25 @@ export async function GET(req: Request) {
   const cli = searchParams.get("cli") ?? "claude";
 
   let models: string[];
+  let defaultModel: string;
   switch (cli) {
     case "claude":
       models = CLAUDE_MODELS;
+      defaultModel = "sonnet";
       break;
     case "kilo":
       models = await getKiloModels();
       if (models.length === 0) models = ["default"];
+      defaultModel = models[0];
       break;
     case "gemini":
       models = GEMINI_MODELS;
+      defaultModel = "gemini-2.5-flash";
       break;
     default:
       models = ["default"];
+      defaultModel = "default";
   }
 
-  return NextResponse.json({ models });
+  return NextResponse.json({ models, defaultModel });
 }

@@ -63,7 +63,16 @@ export function ChatPanel({
   selectedModel,
   onModelChange,
 }: Props) {
-  const { models, loading: modelsLoading, refreshModels } = useModels(cli);
+  const { models, defaultModel, loading: modelsLoading, refreshModels } = useModels(cli);
+  const effectiveModel = selectedModel ?? defaultModel;
+
+  // Auto-select default model when models load
+  useEffect(() => {
+    if (defaultModel && !selectedModel) {
+      onModelChange?.(defaultModel);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultModel]);
   const [input, setInput] = useState("");
   const randomPrompts = useMemo(() => {
     const shuffled = [...PROMPT_SUGGESTIONS].sort(() => Math.random() - 0.5);
@@ -101,13 +110,12 @@ export function ChatPanel({
         {models.length > 0 && (
           <div className="ml-auto flex items-center gap-1">
             <select
-              value={selectedModel ?? ""}
-              onChange={(e) => onModelChange?.(e.target.value || undefined)}
+              value={effectiveModel}
+              onChange={(e) => onModelChange?.(e.target.value)}
               className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
             >
-              <option value="">default</option>
-              {models.map((m) => (
-                <option key={m} value={m}>{m}</option>
+              {models.filter((m) => m !== "default").map((m) => (
+                <option key={m} value={m}>{m}{m === defaultModel ? " (default)" : ""}</option>
               ))}
             </select>
             <button
