@@ -5,6 +5,7 @@ import { MessageView, type ChatMessage } from "./Message";
 import type { UseChatResult } from "@/lib/useChat";
 import type { SelectedElement } from "@/lib/previewInspector";
 import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
+import { useModels } from "@/lib/useModels";
 
 const PROMPT_SUGGESTIONS = [
   "Build a landing page with hero and pricing section",
@@ -46,6 +47,9 @@ interface Props {
   onClearSelection: () => void;
   onOpenBrief?: (messageId: string, questions: ClarifyingQuestion[]) => void;
   cliName?: string;
+  cli?: string;
+  selectedModel?: string;
+  onModelChange?: (model: string | undefined) => void;
 }
 
 export function ChatPanel({
@@ -55,7 +59,11 @@ export function ChatPanel({
   onClearSelection,
   onOpenBrief,
   cliName,
+  cli = "claude",
+  selectedModel,
+  onModelChange,
 }: Props) {
+  const { models, loading: modelsLoading, refreshModels } = useModels(cli);
   const [input, setInput] = useState("");
   const randomPrompts = useMemo(() => {
     const shuffled = [...PROMPT_SUGGESTIONS].sort(() => Math.random() - 0.5);
@@ -90,7 +98,38 @@ export function ChatPanel({
       <div className="flex items-center gap-2 border-b border-slate-200/60 px-4 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-800/60 dark:text-slate-300">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Chat</span>
-        {cliName && !busy && (
+        {models.length > 0 && (
+          <div className="ml-auto flex items-center gap-1">
+            <select
+              value={selectedModel ?? ""}
+              onChange={(e) => onModelChange?.(e.target.value || undefined)}
+              className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+            >
+              <option value="">default</option>
+              {models.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={refreshModels}
+              disabled={modelsLoading}
+              aria-label="Refresh models"
+              title="Refresh models"
+              className="rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            >
+              <svg
+                width="12" height="12" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                className={modelsLoading ? "animate-spin" : ""}
+              >
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+            </button>
+          </div>
+        )}
+        {cliName && !busy && !models.length && (
           <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             {cliName}

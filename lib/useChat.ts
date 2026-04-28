@@ -12,6 +12,7 @@ import {
 interface UseChatOptions {
   workspace: string | null;
   cli?: string;
+  model?: string;
   onTurnComplete: () => void;
   onQuestionsDetected?: (messageId: string, questions: ClarifyingQuestion[]) => void;
 }
@@ -79,6 +80,7 @@ function toolResultText(content: unknown): string {
 export function useChat({
   workspace,
   cli = "claude",
+  model,
   onTurnComplete,
   onQuestionsDetected,
 }: UseChatOptions): UseChatResult {
@@ -244,6 +246,7 @@ export function useChat({
             firstTurn,
             resetSession,
             cli,
+            model,
           }),
           signal: ac.signal,
         });

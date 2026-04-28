@@ -5,6 +5,7 @@ export interface SpawnCliOptions {
   message: string;
   sessionId?: string;
   signal?: AbortSignal;
+  model?: string;
 }
 
 export type CliAdapter = (

@@ -23,6 +23,9 @@ export async function* spawnClaude(
     "--append-system-prompt",
     SYSTEM_PROMPT,
   ];
+  if (opts.model) {
+    args.push("--model", opts.model);
+  }
   if (opts.sessionId) {
     args.push("--resume", opts.sessionId);
   }

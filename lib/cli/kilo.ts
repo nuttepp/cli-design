@@ -119,6 +119,9 @@ export async function* spawnKilo(
     "--dir",
     opts.cwd,
   ];
+  if (opts.model) {
+    args.push("--model", opts.model);
+  }
   if (opts.sessionId) {
     args.push("--session", opts.sessionId, "--continue");
   }

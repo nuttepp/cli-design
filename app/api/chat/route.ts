@@ -19,6 +19,7 @@ interface ChatRequest {
   selectedElement?: SelectedElement | null;
   firstTurn?: boolean;
   cli?: string;
+  model?: string;
 }
 
 const FIRST_TURN_DIRECTIVE = `
@@ -140,6 +141,7 @@ export async function POST(req: Request) {
     ? formatSelectedElement(body.selectedElement, body.message)
     : body.message;
   const cli = body.cli ?? "claude";
+  const model = typeof body.model === "string" ? body.model : undefined;
   if (body.firstTurn) {
     finalMessage = `${finalMessage}${FIRST_TURN_DIRECTIVE}`;
   }
@@ -181,6 +183,7 @@ export async function POST(req: Request) {
           message: finalMessage,
           sessionId,
           signal: ac.signal,
+          model,
         })) {
           // Capture the session id from the init event so subsequent turns
           // can --resume the conversation.

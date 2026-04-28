@@ -103,6 +103,9 @@ export async function* spawnGemini(
     "yolo",
     "--skip-trust",
   ];
+  if (opts.model) {
+    args.push("--model", opts.model);
+  }
   if (opts.sessionId) {
     args.push("--resume", opts.sessionId);
   }

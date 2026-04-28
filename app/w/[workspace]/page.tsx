@@ -31,6 +31,7 @@ export default function StudioPage() {
   });
   const cliName = { claude: "Claude Code", kilo: "Kilo Code", gemini: "Gemini CLI" }[cliKey] ?? cliKey;
 
+  const [selectedModel, setSelectedModel] = useState<string | undefined>(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openFiles, setOpenFiles] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("preview");
@@ -54,6 +55,7 @@ export default function StudioPage() {
   const chat = useChat({
     workspace,
     cli: cliKey,
+    model: selectedModel,
     onTurnComplete: () => setRefreshKey((k) => k + 1),
     onQuestionsDetected: openBrief,
   });
@@ -222,6 +224,9 @@ export default function StudioPage() {
                   onClearSelection={clearSelection}
                   onOpenBrief={openBrief}
                   cliName={cliName}
+                  cli={cliKey}
+                  selectedModel={selectedModel}
+                  onModelChange={setSelectedModel}
                 />
               )}
             </div>
