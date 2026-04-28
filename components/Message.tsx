@@ -64,10 +64,10 @@ function ToolBlock({ call }: { call: ToolCall }) {
   const [open, setOpen] = useState(false);
   const summary = describeTool(call);
   const status = call.isError
-    ? "border-red-500/40 bg-red-500/5 text-red-200"
+    ? "border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/5 dark:text-red-200"
     : call.result !== undefined
-      ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-100"
-      : "border-slate-700 bg-slate-800/40 text-slate-300";
+      ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/5 dark:text-emerald-100"
+      : "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300";
 
   return (
     <div className={`rounded-md border px-3 py-2 text-xs font-mono ${status}`}>
@@ -83,11 +83,11 @@ function ToolBlock({ call }: { call: ToolCall }) {
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          <pre className="max-h-48 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-snug">
+          <pre className="max-h-48 overflow-auto rounded bg-slate-100 p-2 text-[11px] leading-snug text-slate-800 dark:bg-black/40 dark:text-slate-200">
             {JSON.stringify(call.input, null, 2)}
           </pre>
           {call.result !== undefined && (
-            <pre className="max-h-48 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-snug">
+            <pre className="max-h-48 overflow-auto rounded bg-slate-100 p-2 text-[11px] leading-snug text-slate-800 dark:bg-black/40 dark:text-slate-200">
               {call.result.slice(0, 4000)}
               {call.result.length > 4000 ? "\n…(truncated)" : ""}
             </pre>
@@ -110,7 +110,7 @@ function ThinkingBlock({
   const [openOverride, setOpenOverride] = useState<boolean | null>(null);
   const open = openOverride ?? active;
   return (
-    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-100">
+    <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/5 dark:text-amber-100">
       <button
         type="button"
         onClick={() => setOpenOverride(!open)}
@@ -128,7 +128,7 @@ function ThinkingBlock({
         </span>
       </button>
       {open && (
-        <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-black/30 p-2 font-mono text-[11px] leading-snug text-amber-50/90">
+        <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-amber-100/50 p-2 font-mono text-[11px] leading-snug text-amber-900 dark:bg-black/30 dark:text-amber-50/90">
           {text || "…"}
         </pre>
       )}

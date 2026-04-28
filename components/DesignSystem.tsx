@@ -121,14 +121,14 @@ export function DesignSystem() {
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-950 text-slate-100">
-      <div className="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+    <div className="flex h-full flex-col bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+      <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
         <div className="flex items-center gap-3 px-6 py-3">
           <div>
             <h1 className="text-lg font-semibold">Design System</h1>
             <p className="text-xs text-slate-500">
               Source of truth for{" "}
-              <code className="rounded bg-slate-900 px-1 text-slate-300">global.css</code>{" "}
+              <code className="rounded bg-slate-100 px-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">global.css</code>{" "}
               in every workspace.
             </p>
           </div>
@@ -138,7 +138,7 @@ export function DesignSystem() {
             <button
               onClick={reset}
               disabled={saving}
-              className="rounded-md border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+              className="rounded-md border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >
               Reset
             </button>
@@ -159,7 +159,7 @@ export function DesignSystem() {
               className={`relative px-3 py-2 text-xs font-medium capitalize ${
                 tab === t
                   ? "text-indigo-300"
-                  : "text-slate-500 hover:text-slate-300"
+                  : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
               }`}
             >
               {t}
@@ -240,7 +240,7 @@ function Foundations({
             />
           ))}
         </div>
-        <div className="mt-4 rounded-md border border-slate-800 bg-slate-900/40 p-4">
+        <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 p-4">
           <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Type scale</h3>
           <div className="grid gap-2">
             {TYPE_SCALE_KEYS.map((k) => (
@@ -269,9 +269,9 @@ function Foundations({
       </Section>
 
       <Section title="Spacing" subtitle="One base unit drives the whole 8pt-style scale.">
-        <div className="rounded-md border border-slate-800 bg-slate-900/40 p-4">
+        <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 p-4">
           <div className="flex items-center gap-3">
-            <label className="text-sm text-slate-300">Base</label>
+            <label className="text-sm text-slate-600 dark:text-slate-300">Base</label>
             <input
               type="number"
               min={2}
@@ -283,7 +283,7 @@ function Foundations({
                   spacing: { base: Math.max(2, Number(e.target.value) || 0) },
                 }))
               }
-              className="w-24 rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
+              className="w-24 rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-sm text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
             />
             <span className="text-xs text-slate-500">px</span>
           </div>
@@ -301,13 +301,13 @@ function Foundations({
       </Section>
 
       <Section title="Radius & Borders" subtitle="A single base radius drives sm / md / lg / xl.">
-        <div className="grid gap-3 rounded-md border border-slate-800 bg-slate-900/40 p-4 md:grid-cols-2">
+        <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 p-4 md:grid-cols-2">
           <Field label="Base radius">
             <input
               value={tokens.radius.base}
               onChange={(e) => update((t) => ({ ...t, radius: { base: e.target.value } }))}
               placeholder="8px"
-              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-sm text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
             />
           </Field>
           <Field label="Border width">
@@ -315,7 +315,7 @@ function Foundations({
               value={tokens.border.width}
               onChange={(e) => update((t) => ({ ...t, border: { width: e.target.value } }))}
               placeholder="1px"
-              className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-sm text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
             />
           </Field>
         </div>
@@ -343,13 +343,13 @@ function Foundations({
       </Section>
 
       <Section title="Shadows">
-        <div className="grid gap-3 rounded-md border border-slate-800 bg-slate-900/40 p-4 md:grid-cols-3">
+        <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 p-4 md:grid-cols-3">
           {(["sm", "md", "lg"] as const).map((k) => (
             <Field key={k} label={`Shadow ${k}`}>
               <input
                 value={tokens.shadow[k]}
                 onChange={(e) => update((t) => ({ ...t, shadow: { ...t.shadow, [k]: e.target.value } }))}
-                className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
               />
               <div
                 className="mt-2 h-12 w-full rounded"
@@ -365,7 +365,7 @@ function Foundations({
 
 function ColorGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+    <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 p-3">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{title}</h3>
       <div className="grid gap-2">{children}</div>
     </div>
@@ -383,7 +383,7 @@ function ColorRow({
 }) {
   return (
     <div className="grid grid-cols-[7rem_2.5rem_1fr] items-center gap-2">
-      <span className="text-xs text-slate-300">{label}</span>
+      <span className="text-xs text-slate-600 dark:text-slate-300">{label}</span>
       <label className="relative h-9 w-10 overflow-hidden rounded border border-slate-700" style={{ backgroundColor: value }}>
         <input
           type="color"
@@ -397,7 +397,7 @@ function ColorRow({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
-        className="rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 focus:border-indigo-500 focus:outline-none"
+        className="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
       />
     </div>
   );
@@ -415,7 +415,7 @@ function FontPicker({
   const options = slot === "mono" ? POPULAR_MONO_FONTS : POPULAR_FONTS;
   const isCustom = !options.includes(font.family);
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-900/40 p-3">
+    <div className="rounded-md border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/40 p-3">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">{slot} font</h3>
       <select
         value={isCustom ? "__custom__" : font.family}
@@ -424,7 +424,7 @@ function FontPicker({
           if (v === "__custom__") return;
           onChange({ ...font, family: v });
         }}
-        className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
+        className="w-full rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 text-sm text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
       >
         {options.map((f) => (
           <option key={f} value={f}>
@@ -437,7 +437,7 @@ function FontPicker({
         value={font.family}
         onChange={(e) => onChange({ ...font, family: e.target.value })}
         placeholder="Google Font name"
-        className="mt-2 w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 focus:border-indigo-500 focus:outline-none"
+        className="mt-2 w-full rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
       />
       <div className="mt-3">
         <p className="mb-1 text-[10px] uppercase tracking-wider text-slate-500">Weights</p>
@@ -465,7 +465,7 @@ function FontPicker({
         </div>
       </div>
       <div
-        className="mt-3 truncate text-base text-slate-200"
+        className="mt-3 truncate text-base text-slate-700 dark:text-slate-200"
         style={{ fontFamily: `'${font.family}', ${slot === "mono" ? "monospace" : "sans-serif"}` }}
       >
         Aa Bb Cc — The quick brown fox.
@@ -492,22 +492,22 @@ function TypeScaleRow({
         value={value.size}
         onChange={(e) => onChange({ size: e.target.value })}
         placeholder="size"
-        className="rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 focus:border-indigo-500 focus:outline-none"
+        className="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
       />
       <input
         value={value.lineHeight}
         onChange={(e) => onChange({ lineHeight: e.target.value })}
         placeholder="line-height"
-        className="rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 focus:border-indigo-500 focus:outline-none"
+        className="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
       />
       <input
         type="number"
         value={value.weight}
         onChange={(e) => onChange({ weight: Number(e.target.value) || 400 })}
-        className="rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-slate-100 focus:border-indigo-500 focus:outline-none"
+        className="rounded border border-slate-300 bg-white px-2 py-1 dark:border-slate-700 dark:bg-slate-950 font-mono text-xs text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
       />
       <span
-        className="truncate text-slate-200"
+        className="truncate text-slate-700 dark:text-slate-200"
         style={{
           fontFamily: `'${fontFamily}', sans-serif`,
           fontSize: value.size,
@@ -967,7 +967,7 @@ function Section({
   return (
     <section>
       <div className="mb-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300">{title}</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-300">{title}</h2>
         {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
       </div>
       {children}

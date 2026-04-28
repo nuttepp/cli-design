@@ -24,15 +24,15 @@ function InlineDiff({
   const oldLines = oldStr.split("\n");
   const newLines = newStr.split("\n");
   return (
-    <pre className="mt-2 max-h-64 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-snug">
+    <pre className="mt-2 max-h-64 overflow-auto rounded bg-slate-100 p-2 text-[11px] leading-snug dark:bg-black/40">
       {oldLines.map((line, i) => (
-        <div key={`o${i}`} className="bg-red-500/10 text-red-300">
+        <div key={`o${i}`} className="bg-red-500/10 text-red-700 dark:text-red-300">
           <span className="select-none opacity-50">- </span>
           {line}
         </div>
       ))}
       {newLines.map((line, i) => (
-        <div key={`n${i}`} className="bg-emerald-500/10 text-emerald-300">
+        <div key={`n${i}`} className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
           <span className="select-none opacity-50">+ </span>
           {line}
         </div>
@@ -49,7 +49,7 @@ function ContentPreview({ content }: { content: string }) {
 
   return (
     <div className="mt-2">
-      <pre className="max-h-64 overflow-auto rounded bg-black/40 p-2 text-[11px] leading-snug text-emerald-200/80">
+      <pre className="max-h-64 overflow-auto rounded bg-slate-100 p-2 text-[11px] leading-snug text-emerald-800 dark:bg-black/40 dark:text-emerald-200/80">
         {visible.join("\n")}
         {truncated && !expanded && "\n…"}
       </pre>
@@ -57,7 +57,7 @@ function ContentPreview({ content }: { content: string }) {
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
-          className="mt-1 text-[10px] text-slate-400 hover:text-slate-200"
+          className="mt-1 text-[10px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
           {expanded
             ? "Show less"
@@ -86,10 +86,10 @@ export function DiffBlock({ call }: { call: ToolCall }) {
   const label = isEdit ? `Edit ${path}` : `Write ${path}`;
 
   const status = call.isError
-    ? "border-red-500/40 bg-red-500/5 text-red-200"
+    ? "border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/5 dark:text-red-200"
     : call.result !== undefined
-      ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-100"
-      : "border-slate-700 bg-slate-800/40 text-slate-300";
+      ? "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/5 dark:text-emerald-100"
+      : "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-300";
 
   return (
     <div className={`rounded-md border px-3 py-2 text-xs font-mono ${status}`}>
@@ -113,7 +113,7 @@ export function DiffBlock({ call }: { call: ToolCall }) {
             <ContentPreview content={content} />
           )}
           {call.isError && call.result && (
-            <pre className="mt-2 max-h-32 overflow-auto rounded bg-red-500/10 p-2 text-[11px] text-red-300">
+            <pre className="mt-2 max-h-32 overflow-auto rounded bg-red-50 p-2 text-[11px] text-red-700 dark:bg-red-500/10 dark:text-red-300">
               {call.result.slice(0, 2000)}
             </pre>
           )}

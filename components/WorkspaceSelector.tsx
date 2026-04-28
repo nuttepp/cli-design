@@ -63,12 +63,12 @@ export function WorkspaceSelector({ selected, onSelect }: Props) {
   };
 
   return (
-    <div className="flex items-center gap-2 border-b border-slate-800 bg-slate-900/60 px-4 py-2">
+    <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900/60">
       <span className="text-sm text-slate-400">Workspace</span>
       <select
         value={selected ?? ""}
         onChange={(e) => onSelect(e.target.value || null)}
-        className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-100 focus:border-indigo-500 focus:outline-none"
+        className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
       >
         <option value="">— select —</option>
         {list.map((name) => (
@@ -91,7 +91,7 @@ export function WorkspaceSelector({ selected, onSelect }: Props) {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="my-app"
-            className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
           />
           <button
             type="submit"
@@ -107,7 +107,7 @@ export function WorkspaceSelector({ selected, onSelect }: Props) {
               setNewName("");
               setError(null);
             }}
-            className="rounded px-2 py-1 text-xs text-slate-400 hover:text-slate-200"
+            className="rounded px-2 py-1 text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           >
             Cancel
           </button>
@@ -116,7 +116,7 @@ export function WorkspaceSelector({ selected, onSelect }: Props) {
         <button
           type="button"
           onClick={() => setCreating(true)}
-          className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:bg-slate-800"
+          className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           + New
         </button>
@@ -126,7 +126,7 @@ export function WorkspaceSelector({ selected, onSelect }: Props) {
         <button
           type="button"
           onClick={() => void remove(selected)}
-          className="rounded border border-red-500/40 px-2 py-1 text-xs text-red-300 hover:bg-red-500/10"
+          className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
         >
           Delete
         </button>

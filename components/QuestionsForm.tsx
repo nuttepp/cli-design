@@ -79,7 +79,7 @@ export function QuestionsForm({
     >
       {isTab && (
         <header className="space-y-1">
-          <h2 className="text-base font-semibold text-slate-100">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
             Project brief
           </h2>
           <p className="text-xs text-slate-400">
@@ -135,8 +135,8 @@ function QuestionField({
   isTab: boolean;
 }) {
   const labelClass = isTab
-    ? "block text-sm text-slate-200"
-    : "block text-xs text-slate-200";
+    ? "block text-sm text-slate-700 dark:text-slate-200"
+    : "block text-xs text-slate-700 dark:text-slate-200";
   const isChoice = question.type === "single" || question.type === "multi";
   const showOtherText = !isChoice || answer.selected.includes(OTHER);
 
@@ -188,7 +188,7 @@ function QuestionField({
           placeholder={
             isChoice ? "Other (free text)…" : "Type your answer…"
           }
-          className="block w-full resize-y rounded-md border border-slate-700 bg-slate-950/60 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none disabled:opacity-60"
+          className="block w-full resize-y rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-100 dark:placeholder:text-slate-500"
         />
       )}
     </div>
@@ -214,7 +214,7 @@ function OptionChip({
       className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition ${
         checked
           ? "border-indigo-400 bg-indigo-500/20 text-indigo-100"
-          : "border-slate-700 bg-slate-900 text-slate-300 hover:border-slate-500"
+          : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-500"
       } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
     >
       <input
@@ -229,7 +229,7 @@ function OptionChip({
         className={`inline-flex h-3 w-3 shrink-0 items-center justify-center border ${shape} ${
           checked
             ? "border-indigo-400 bg-indigo-500 text-white"
-            : "border-slate-500 bg-slate-950"
+            : "border-slate-300 bg-white dark:border-slate-500 dark:bg-slate-950"
         }`}
       >
         {checked && type === "multi" && (

@@ -199,9 +199,9 @@ export function ElementEditorPanel({
   };
 
   return (
-    <div className="flex h-full flex-col bg-slate-900/40">
-      <div className="flex items-center gap-2 border-b border-slate-800 px-3 py-2">
-        <span className="rounded bg-indigo-500/20 px-1.5 py-0.5 font-mono text-[11px] text-indigo-200">
+    <div className="flex h-full flex-col bg-white dark:bg-slate-900/40">
+      <div className="flex items-center gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
+        <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[11px] text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
           &lt;{element.tag}
           {element.id ? `#${element.id}` : ""}
           {element.classList.length
@@ -219,7 +219,7 @@ export function ElementEditorPanel({
           type="button"
           onClick={resetAll}
           disabled={!Object.keys(overrides).length}
-          className="ml-auto rounded border border-slate-700 px-2 py-0.5 text-[10px] text-slate-300 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="ml-auto rounded border border-slate-300 px-2 py-0.5 text-[10px] text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           title="Reset all overrides"
         >
           Reset
@@ -229,7 +229,7 @@ export function ElementEditorPanel({
           onClick={onClose}
           aria-label="Close element editor"
           title="Close (back to chat)"
-          className="rounded border border-slate-700 px-2 py-0.5 text-[11px] text-slate-300 hover:bg-slate-800"
+          className="rounded border border-slate-300 px-2 py-0.5 text-[11px] text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
         >
           ×
         </button>
@@ -346,10 +346,10 @@ function FieldRow({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className={`rounded border bg-slate-950/50 px-2 py-1 text-xs text-slate-100 focus:outline-none ${
+          className={`rounded border bg-white px-2 py-1 text-xs text-slate-900 dark:bg-slate-950/50 dark:text-slate-100 focus:outline-none ${
             overridden
               ? "border-indigo-500"
-              : "border-slate-700 focus:border-indigo-500"
+              : "border-slate-300 dark:border-slate-700 focus:border-indigo-500"
           }`}
         >
           <option value="">{initial || "—"}</option>
@@ -373,10 +373,10 @@ function FieldRow({
           placeholder={initial || "—"}
           onChange={(e) => onChange(e.target.value)}
           spellCheck={false}
-          className={`rounded border bg-slate-950/50 px-2 py-1 font-mono text-xs text-slate-100 focus:outline-none ${
+          className={`rounded border bg-white px-2 py-1 font-mono text-xs text-slate-900 dark:bg-slate-950/50 dark:text-slate-100 focus:outline-none ${
             overridden
               ? "border-indigo-500"
-              : "border-slate-700 focus:border-indigo-500"
+              : "border-slate-300 dark:border-slate-700 focus:border-indigo-500"
           }`}
         />
       )}
@@ -385,7 +385,7 @@ function FieldRow({
         onClick={onReset}
         disabled={!overridden}
         title="Reset to original"
-        className="rounded px-1 text-[11px] text-slate-500 hover:bg-slate-800 hover:text-slate-200 disabled:cursor-not-allowed disabled:opacity-30"
+        className="rounded px-1 text-[11px] text-slate-500 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-slate-800 dark:hover:text-slate-200"
       >
         ↺
       </button>
@@ -408,15 +408,15 @@ function ColorField({
   const swatch = colorForPicker(display);
   return (
     <div
-      className={`flex items-center gap-1.5 rounded border bg-slate-950/50 px-2 py-1 ${
-        overridden ? "border-indigo-500" : "border-slate-700"
+      className={`flex items-center gap-1.5 rounded border bg-white px-2 py-1 dark:bg-slate-950/50 ${
+        overridden ? "border-indigo-500" : "border-slate-300 dark:border-slate-700"
       }`}
     >
       <input
         type="color"
         value={swatch}
         onChange={(e) => onChange(e.target.value)}
-        className="h-5 w-7 cursor-pointer rounded border border-slate-700 bg-transparent"
+        className="h-5 w-7 cursor-pointer rounded border border-slate-300 dark:border-slate-700 bg-transparent"
         aria-label="Color picker"
       />
       <input
