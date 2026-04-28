@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import {
   parseClarifyingQuestions,
   type ClarifyingQuestion,
@@ -207,12 +208,12 @@ export function MessageView({
         )}
         {visibleText && (
           <div className="leading-relaxed">
-            <div className={`prose prose-sm max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-pre:my-2 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-lg ${
+            <div className={`prose prose-sm max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-ol:my-1.5 prose-li:my-0.5 prose-pre:my-2 prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-[0.85em] prose-code:before:content-none prose-code:after:content-none prose-pre:rounded-lg prose-table:my-2 prose-th:px-3 prose-th:py-1.5 prose-td:px-3 prose-td:py-1.5 prose-thead:border-b prose-thead:border-slate-300 dark:prose-thead:border-slate-600 ${
               isUser
                 ? "prose-invert prose-code:bg-white/15 prose-pre:bg-black/20"
                 : "dark:prose-invert prose-code:bg-black/10 dark:prose-code:bg-white/10 prose-pre:bg-black/20 dark:prose-pre:bg-black/40"
             }`}>
-              <Markdown>{visibleText}</Markdown>
+              <Markdown remarkPlugins={[remarkGfm]}>{visibleText}</Markdown>
             </div>
             {message.pending && (
               <span className="ml-1 inline-block h-3 w-1.5 animate-pulse bg-current align-middle" />
@@ -245,7 +246,7 @@ export function MessageView({
       {!isUser && (timeStr || message.duration) && (
         <div className="mb-1 flex shrink-0 flex-col items-start gap-0.5">
           {message.duration != null && !message.pending && (
-            <span className="text-[10px] text-indigo-400 dark:text-indigo-400">{message.duration}s</span>
+            <span className="text-[10px] text-indigo-400 dark:text-indigo-400">{message.duration! >= 60 ? `${(message.duration! / 60).toFixed(1)}m` : `${message.duration}s`}</span>
           )}
           {timeStr && (
             <span className="text-[10px] text-slate-400 dark:text-slate-500">{timeStr}</span>
