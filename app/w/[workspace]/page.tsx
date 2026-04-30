@@ -8,7 +8,7 @@ import { ElementEditorPanel } from "@/components/ElementEditorPanel";
 import { PreviewPanel, type BriefTab } from "@/components/PreviewPanel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import type { ClarifyingQuestion } from "@/lib/clarifyingQuestions";
-import type { SelectedElement } from "@/lib/previewInspector";
+import type { RuntimeError, SelectedElement } from "@/lib/previewInspector";
 import { useChat } from "@/lib/useChat";
 
 const CHAT_MIN_WIDTH = 200;
@@ -36,6 +36,7 @@ export default function StudioPage() {
   const [openFiles, setOpenFiles] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<string>("preview");
   const [fullscreen, setFullscreen] = useState(false);
+  const [showEscHint, setShowEscHint] = useState(false);
   const [chatWidth, setChatWidth] = useState(CHAT_DEFAULT_WIDTH);
   const resizingRef = useRef(false);
   const [inspectMode, setInspectMode] = useState(false);
@@ -74,6 +75,29 @@ export default function StudioPage() {
     if (activeTab !== "preview" && inspectMode) setInspectMode(false);
   }, [activeTab, inspectMode]);
 
+  // While fullscreen: ESC exits, and a hint panel appears briefly.
+  useEffect(() => {
+    if (!fullscreen) {
+      setShowEscHint(false);
+      return;
+    }
+    setShowEscHint(true);
+    const hideTimer = window.setTimeout(() => setShowEscHint(false), 3500);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+      e.preventDefault();
+      setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(hideTimer);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [fullscreen]);
+
   // A fresh selection always starts with no overrides.
   const handleElementSelect = useCallback((sel: SelectedElement) => {
     setSelectedElement(sel);
@@ -105,6 +129,26 @@ export default function StudioPage() {
     [chat],
   );
 
+  const fixRuntimeErrors = useCallback(
+    (errors: RuntimeError[]) => {
+      if (!errors.length) return;
+      const lines = errors.map((e, i) => {
+        const loc = e.source
+          ? ` (${e.source}${e.line != null ? `:${e.line}${e.col != null ? `:${e.col}` : ""}` : ""})`
+          : "";
+        const stack = e.stack ? `\n  ${e.stack.split("\n").join("\n  ")}` : "";
+        return `${i + 1}. [${e.kind}] ${e.message}${loc}${stack}`;
+      });
+      const message = [
+        "The preview is reporting the following runtime errors. Please investigate and fix the underlying cause in the workspace files:",
+        "",
+        ...lines,
+      ].join("\n");
+      void chat.send(message);
+    },
+    [chat],
+  );
+
   const onResizePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     resizingRef.current = true;
@@ -126,6 +170,7 @@ export default function StudioPage() {
 
   return (
     <main className="flex h-screen flex-col">
+      {!fullscreen && (
       <header className="flex items-center gap-3 border-b border-slate-200/60 bg-white/80 px-4 py-2 backdrop-blur-md dark:border-slate-800/60 dark:bg-slate-950/80">
         <Link
           href="/"
@@ -162,6 +207,7 @@ export default function StudioPage() {
           </button>
         </div>
       </header>
+      )}
 
       <div
         className="grid min-h-0 flex-1"
@@ -189,8 +235,21 @@ export default function StudioPage() {
             onCloseBrief={closeBrief}
             onSubmitBrief={submitBrief}
             onOpenFile={openFile}
+            onFixRuntimeErrors={fixRuntimeErrors}
           />
         </div>
+        {fullscreen && (
+          <div
+            aria-live="polite"
+            className={`pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transition-opacity duration-500 ${showEscHint ? "opacity-100" : "opacity-0"}`}
+          >
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-4 py-1.5 text-xs font-medium text-slate-700 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:text-slate-200">
+              Press
+              <kbd className="rounded border border-slate-300 bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] dark:border-slate-600 dark:bg-slate-800">Esc</kbd>
+              to exit fullscreen
+            </div>
+          </div>
+        )}
         {!fullscreen && (
           <>
             <div

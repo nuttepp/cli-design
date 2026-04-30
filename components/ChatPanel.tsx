@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MessageView, type ChatMessage } from "./Message";
 import type { UseChatResult } from "@/lib/useChat";
 import type { SelectedElement } from "@/lib/previewInspector";
@@ -74,6 +74,15 @@ export function ChatPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultModel]);
   const [input, setInput] = useState("");
+  type Attachment = {
+    id: string;
+    path: string;
+    previewUrl: string;
+    name: string;
+    uploading: boolean;
+    error?: string;
+  };
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const randomPrompts = useMemo(() => {
     const shuffled = [...PROMPT_SUGGESTIONS].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, 3);
@@ -82,6 +91,86 @@ export function ChatPanel({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { messages, busy, activity, elapsed, send, stop } = chat;
+
+  const uploadImage = useCallback(
+    async (file: File) => {
+      if (!workspace) return;
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const previewUrl = URL.createObjectURL(file);
+      const placeholder: Attachment = {
+        id,
+        path: "",
+        previewUrl,
+        name: file.name || "pasted-image",
+        uploading: true,
+      };
+      setAttachments((prev) => [...prev, placeholder]);
+      try {
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+        const res = await fetch(
+          `/api/workspaces/${encodeURIComponent(workspace)}/attachments`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ dataUrl }),
+          },
+        );
+        const data = (await res.json().catch(() => ({}))) as {
+          path?: string;
+          error?: string;
+        };
+        if (!res.ok || !data.path) {
+          throw new Error(data.error ?? `HTTP ${res.status}`);
+        }
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.id === id ? { ...a, path: data.path!, uploading: false } : a,
+          ),
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setAttachments((prev) =>
+          prev.map((a) =>
+            a.id === id ? { ...a, uploading: false, error: msg } : a,
+          ),
+        );
+      }
+    },
+    [workspace],
+  );
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments((prev) => {
+      const target = prev.find((a) => a.id === id);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((a) => a.id !== id);
+    });
+  }, []);
+
+  const onPaste = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (!workspace) return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const images: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === "file" && item.type.startsWith("image/")) {
+          const f = item.getAsFile();
+          if (f) images.push(f);
+        }
+      }
+      if (images.length === 0) return;
+      e.preventDefault();
+      images.forEach((f) => void uploadImage(f));
+    },
+    [workspace, uploadImage],
+  );
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -97,9 +186,19 @@ export function ChatPanel({
 
   const submit = async () => {
     const text = input.trim();
-    if (!text) return;
+    const ready = attachments.filter((a) => !a.uploading && !a.error && a.path);
+    if (!text && ready.length === 0) return;
+    if (attachments.some((a) => a.uploading)) return;
+    let composed = text;
+    if (ready.length > 0) {
+      const lines = ready.map((a) => `- ${a.path}`);
+      const header = ready.length === 1 ? "Attached image:" : "Attached images:";
+      composed = [header, ...lines, "", text].filter(Boolean).join("\n");
+    }
     setInput("");
-    await send(text);
+    attachments.forEach((a) => URL.revokeObjectURL(a.previewUrl));
+    setAttachments([]);
+    await send(composed);
   };
 
   return (
@@ -107,61 +206,6 @@ export function ChatPanel({
       <div className="flex items-center gap-2 border-b border-slate-200/60 px-4 py-2.5 text-sm font-medium text-slate-700 dark:border-slate-800/60 dark:text-slate-300">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         <span>Chat</span>
-        {models.length > 0 && (
-          <div className="ml-auto flex items-center gap-1">
-            <select
-              value={effectiveModel}
-              onChange={(e) => onModelChange?.(e.target.value)}
-              className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-            >
-              {models.filter((m) => m !== "default").map((m) => (
-                <option key={m} value={m}>{m}{m === defaultModel ? " (default)" : ""}</option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={refreshModels}
-              disabled={modelsLoading}
-              aria-label="Refresh models"
-              title="Refresh models"
-              className="rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-            >
-              <svg
-                width="12" height="12" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                className={modelsLoading ? "animate-spin" : ""}
-              >
-                <polyline points="23 4 23 10 17 10" />
-                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-              </svg>
-            </button>
-          </div>
-        )}
-        {cliName && !busy && !models.length && (
-          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            {cliName}
-          </span>
-        )}
-        {busy && (
-          <span className="ml-auto flex items-center gap-2 text-xs text-indigo-600 dark:text-indigo-300">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
-            </span>
-            <span className="truncate max-w-[18rem]" title={activity}>
-              {activity || "working…"}
-            </span>
-            <span className="tabular-nums text-slate-500">{elapsed}s</span>
-            <button
-              type="button"
-              onClick={stop}
-              className="rounded-md border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              Stop
-            </button>
-          </span>
-        )}
       </div>
       <div
         ref={scrollerRef}
@@ -215,6 +259,38 @@ export function ChatPanel({
         }}
       >
         <div className="relative rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/80">
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 border-b border-slate-200/60 px-2 py-2 dark:border-slate-700/60">
+              {attachments.map((a) => (
+                <div
+                  key={a.id}
+                  className="group relative h-14 w-14 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900"
+                  title={a.error ? `Failed: ${a.error}` : a.path || a.name}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={a.previewUrl} alt={a.name} className="h-full w-full object-cover" />
+                  {a.uploading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                    </div>
+                  )}
+                  {a.error && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-red-600/70 text-[9px] font-bold text-white">
+                      ERROR
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(a.id)}
+                    aria-label="Remove attachment"
+                    className="absolute right-0.5 top-0.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-slate-900/80 text-[10px] leading-none text-white opacity-0 transition group-hover:opacity-100"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             value={input}
@@ -225,10 +301,11 @@ export function ChatPanel({
                 void submit();
               }
             }}
+            onPaste={onPaste}
             placeholder={
               !workspace
                 ? "Pick a workspace first."
-                : "Describe a UI to build…"
+                : "Describe a UI to build… (paste an image to attach)"
             }
             disabled={!workspace || busy}
             rows={1}
@@ -236,7 +313,12 @@ export function ChatPanel({
           />
           <button
             type="submit"
-            disabled={!workspace || busy || !input.trim()}
+            disabled={
+              !workspace ||
+              busy ||
+              attachments.some((a) => a.uploading) ||
+              (!input.trim() && attachments.filter((a) => a.path && !a.error).length === 0)
+            }
             aria-label={busy ? "Working" : "Send"}
             className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
@@ -254,6 +336,66 @@ export function ChatPanel({
               </svg>
             )}
           </button>
+        </div>
+        <div className="mt-2 flex items-center gap-2 text-[11px]">
+          {models.length > 0 ? (
+            <div className="flex items-center gap-1">
+              <select
+                value={effectiveModel}
+                onChange={(e) => onModelChange?.(e.target.value)}
+                className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[11px] text-slate-600 focus:border-indigo-500 focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+              >
+                {models.filter((m) => m !== "default").map((m) => (
+                  <option key={m} value={m}>{m}{m === defaultModel ? " (default)" : ""}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={refreshModels}
+                disabled={modelsLoading}
+                aria-label="Refresh models"
+                title="Refresh models"
+                className="rounded-md p-0.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-40 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              >
+                <svg
+                  width="12" height="12" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  className={modelsLoading ? "animate-spin" : ""}
+                >
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <span />
+          )}
+          <div className="ml-auto flex items-center gap-2">
+            {busy ? (
+              <span className="flex items-center gap-2 text-indigo-600 dark:text-indigo-300">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
+                </span>
+                <span className="truncate max-w-[14rem]" title={activity}>
+                  {activity || "working…"}
+                </span>
+                <span className="tabular-nums text-slate-500">{elapsed}s</span>
+                <button
+                  type="button"
+                  onClick={stop}
+                  className="rounded-md border border-slate-300 px-1.5 py-0.5 text-[10px] font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  Stop
+                </button>
+              </span>
+            ) : cliName ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-medium text-emerald-700 dark:text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {cliName}
+              </span>
+            ) : null}
+          </div>
         </div>
       </form>
     </div>

@@ -9,10 +9,24 @@ export type SelectedElement = {
   rect: { x: number; y: number; width: number; height: number };
 };
 
+export type RuntimeError = {
+  kind: "exception" | "resource" | "rejection";
+  message: string;
+  stack?: string | null;
+  source?: string | null;
+  line?: number | null;
+  col?: number | null;
+};
+
 export type InspectorMessage =
   | { __sandpack_inspector__: true; type: "activate" }
   | { __sandpack_inspector__: true; type: "deactivate" }
   | { __sandpack_inspector__: true; type: "select"; payload: SelectedElement }
+  | {
+      __sandpack_inspector__: true;
+      type: "runtime_error";
+      payload: RuntimeError;
+    }
   | {
       __sandpack_inspector__: true;
       type: "apply_style";
@@ -296,6 +310,45 @@ export const INSPECTOR_SCRIPT = `(function(){
   document.addEventListener("pointerdown", onSuppress, true);
   document.addEventListener("mousedown", onSuppress, true);
   document.addEventListener("click", onClick, true);
+
+  function reportError(info){
+    try {
+      window.parent.postMessage({ ${JSON.stringify(INSPECTOR_MARKER)}: true, type: "runtime_error", payload: info }, "*");
+    } catch (_) {}
+  }
+
+  window.addEventListener("error", function(e){
+    var t = e.target;
+    if (t && t !== window && t.tagName) {
+      var src = t.src || t.href || "";
+      reportError({
+        kind: "resource",
+        message: "Failed to load " + String(t.tagName).toLowerCase() + (src ? ": " + src : ""),
+        source: src || null,
+      });
+      return;
+    }
+    reportError({
+      kind: "exception",
+      message: e.message || "Uncaught error",
+      stack: e.error && e.error.stack ? String(e.error.stack) : null,
+      source: e.filename || null,
+      line: typeof e.lineno === "number" ? e.lineno : null,
+      col: typeof e.colno === "number" ? e.colno : null,
+    });
+  }, true);
+
+  window.addEventListener("unhandledrejection", function(e){
+    var r = e.reason;
+    var msg = "Unhandled promise rejection";
+    if (r && typeof r === "object" && r.message) msg = String(r.message);
+    else if (r != null) msg = String(r);
+    reportError({
+      kind: "rejection",
+      message: msg,
+      stack: r && r.stack ? String(r.stack) : null,
+    });
+  });
 
   // Tracks inline-style props this script has applied per selector, so we can
   // remove props that are no longer in the latest override map (revert to the

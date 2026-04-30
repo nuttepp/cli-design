@@ -22,6 +22,7 @@ import { useTheme } from "@/lib/useTheme";
 import {
   INSPECTOR_MARKER,
   injectInspectorScript,
+  type RuntimeError,
   type SelectedElement,
 } from "@/lib/previewInspector";
 
@@ -47,6 +48,7 @@ interface Props {
   onCloseBrief?: () => void;
   onSubmitBrief?: (text: string) => void;
   onOpenFile?: (path: string) => void;
+  onFixRuntimeErrors?: (errors: RuntimeError[]) => void;
 }
 
 const SAVE_DEBOUNCE_MS = 5000;
@@ -83,6 +85,7 @@ export function PreviewPanel({
   onCloseBrief,
   onSubmitBrief,
   onOpenFile,
+  onFixRuntimeErrors,
 }: Props) {
   const { theme } = useTheme();
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -90,6 +93,8 @@ export function PreviewPanel({
   const [error, setError] = useState<string | null>(null);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState<Record<string, boolean>>({});
+  const [runtimeErrors, setRuntimeErrors] = useState<RuntimeError[]>([]);
+  const [errorsCollapsed, setErrorsCollapsed] = useState(false);
   const saveTimers = useRef<Map<string, number>>(new Map());
   const editsRef = useRef(edits);
   const dirtyRef = useRef(dirty);
@@ -224,22 +229,43 @@ export function PreviewPanel({
     lastSelectorRef.current = liveSelector;
   }, [liveSelector, liveOverrides, postToIframe, refreshKey]);
 
-  // Listen for selection events posted by the injected inspector script.
+  // Listen for events posted by the injected inspector script: element
+  // selection and runtime errors from inside the preview iframe.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       const d = e.data as
-        | { [INSPECTOR_MARKER]?: boolean; type?: string; payload?: SelectedElement }
+        | {
+            [INSPECTOR_MARKER]?: boolean;
+            type?: string;
+            payload?: SelectedElement | RuntimeError;
+          }
         | null;
       if (!d || d[INSPECTOR_MARKER] !== true) return;
-      if (d.type !== "select" || !d.payload) return;
       const iframe = previewContainerRef.current?.querySelector("iframe");
       if (iframe && e.source !== iframe.contentWindow) return;
-      onElementSelect(d.payload);
-      onInspectToggle(false);
+      if (d.type === "select" && d.payload) {
+        onElementSelect(d.payload as SelectedElement);
+        onInspectToggle(false);
+      } else if (d.type === "runtime_error" && d.payload) {
+        const err = d.payload as RuntimeError;
+        setRuntimeErrors((prev) => {
+          if (prev.some((p) => p.message === err.message && p.source === err.source && p.line === err.line)) {
+            return prev;
+          }
+          return [...prev, err].slice(-20);
+        });
+        setErrorsCollapsed(false);
+      }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [onElementSelect, onInspectToggle]);
+
+  // Clear collected runtime errors whenever the iframe reloads (workspace
+  // change or post-turn refresh) — stale errors would be misleading.
+  useEffect(() => {
+    setRuntimeErrors([]);
+  }, [workspace, refreshKey]);
 
   // Esc cancels inspect mode without selecting.
   useEffect(() => {
@@ -422,10 +448,86 @@ export function PreviewPanel({
               <SandpackPreview
                 style={{ height: "100%" }}
                 showOpenInCodeSandbox={false}
-                showRefreshButton
+                showRefreshButton={!hideTabs}
+                showNavigator={false}
               />
             </SandpackLayout>
           </SandpackProvider>
+          {runtimeErrors.length > 0 && (
+            <div className="pointer-events-none absolute inset-x-3 bottom-3 z-30 flex justify-center">
+              <div className="pointer-events-auto w-full max-w-2xl overflow-hidden rounded-xl border border-red-300 bg-white/95 shadow-lg backdrop-blur dark:border-red-500/40 dark:bg-slate-900/95">
+                <div className="flex items-center gap-2 border-b border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span>
+                    {runtimeErrors.length} error{runtimeErrors.length > 1 ? "s" : ""} in preview
+                  </span>
+                  {onFixRuntimeErrors && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onFixRuntimeErrors(runtimeErrors);
+                        setRuntimeErrors([]);
+                      }}
+                      className="ml-auto inline-flex items-center gap-1 rounded-md border border-red-500 bg-red-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm transition hover:bg-red-500"
+                    >
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                      </svg>
+                      Fix with AI
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setErrorsCollapsed((v) => !v)}
+                    className={`${onFixRuntimeErrors ? "" : "ml-auto "}rounded px-1.5 py-0.5 text-[10px] font-medium text-red-700 transition hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-500/20`}
+                  >
+                    {errorsCollapsed ? "Show" : "Hide"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRuntimeErrors([])}
+                    aria-label="Dismiss errors"
+                    title="Dismiss"
+                    className="rounded px-1.5 py-0.5 text-[10px] font-medium text-red-700 transition hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-500/20"
+                  >
+                    Clear
+                  </button>
+                </div>
+                {!errorsCollapsed && (
+                  <div className="max-h-48 overflow-y-auto px-3 py-2 text-xs">
+                    <ul className="space-y-2">
+                      {runtimeErrors.map((err, i) => (
+                        <li key={i} className="font-mono">
+                          <div className="flex items-start gap-2">
+                            <span className="mt-0.5 inline-flex flex-shrink-0 items-center rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700 dark:bg-red-500/20 dark:text-red-300">
+                              {err.kind}
+                            </span>
+                            <div className="min-w-0 flex-1 break-words text-slate-800 dark:text-slate-200">
+                              <div>{err.message}</div>
+                              {(err.source || err.line != null) && (
+                                <div className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
+                                  {err.source ?? "<inline>"}{err.line != null ? `:${err.line}${err.col != null ? `:${err.col}` : ""}` : ""}
+                                </div>
+                              )}
+                              {err.stack && (
+                                <pre className="mt-1 whitespace-pre-wrap break-words text-[10px] text-slate-500 dark:text-slate-400">
+                                  {err.stack}
+                                </pre>
+                              )}
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <div
           className="absolute inset-0"

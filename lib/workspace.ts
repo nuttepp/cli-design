@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { buildGlobalCss } from "./designSystem";
 import { loadTokens } from "./designSystemStore";
+import { PROJECT_KICKOFF_MD } from "./cli/projectKickoff";
 
 export const WORKSPACES_ROOT = path.resolve(process.cwd(), "workspaces");
 
@@ -420,12 +421,47 @@ export async function createWorkspace(name: string): Promise<void> {
     fs.writeFile(path.join(srcDir, "components.jsx"), STARTER_COMPONENTS_JSX, "utf8"),
     fs.writeFile(path.join(srcDir, "app.jsx"), STARTER_APP_JSX, "utf8"),
     fs.writeFile(path.join(dir, "README.md"), STARTER_README, "utf8"),
+    fs.writeFile(path.join(dir, ".kickoff.md"), PROJECT_KICKOFF_MD, "utf8"),
   ]);
 }
 
 export async function deleteWorkspace(name: string): Promise<void> {
   const dir = workspacePath(name);
   await fs.rm(dir, { recursive: true, force: true });
+}
+
+const ALLOWED_IMAGE_EXTS = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "gif",
+  "webp",
+  "svg",
+]);
+const MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024;
+
+export async function saveAttachment(
+  name: string,
+  buffer: Buffer,
+  ext: string,
+): Promise<{ relPath: string }> {
+  if (buffer.byteLength === 0) {
+    throw new WorkspaceError(400, "Empty attachment");
+  }
+  if (buffer.byteLength > MAX_ATTACHMENT_BYTES) {
+    throw new WorkspaceError(413, "Attachment exceeds 8MB limit");
+  }
+  const cleanExt = ext.replace(/^\./, "").toLowerCase();
+  if (!ALLOWED_IMAGE_EXTS.has(cleanExt)) {
+    throw new WorkspaceError(400, `Unsupported image type: ${ext}`);
+  }
+  const dir = path.join(workspacePath(name), ".attachments");
+  await fs.mkdir(dir, { recursive: true });
+  const stamp = Date.now().toString(36);
+  const rand = Math.random().toString(36).slice(2, 8);
+  const filename = `${stamp}-${rand}.${cleanExt}`;
+  await fs.writeFile(path.join(dir, filename), buffer);
+  return { relPath: `.attachments/${filename}` };
 }
 
 export async function renameWorkspace(
