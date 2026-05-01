@@ -89,6 +89,7 @@ export function ChatPanel({
   }, []);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { messages, busy, activity, elapsed, send, stop } = chat;
 
@@ -151,6 +152,16 @@ export function ChatPanel({
       return prev.filter((a) => a.id !== id);
     });
   }, []);
+
+  const onPickFiles = useCallback(
+    (files: FileList | null) => {
+      if (!files || !workspace) return;
+      Array.from(files)
+        .filter((f) => f.type.startsWith("image/"))
+        .forEach((f) => void uploadImage(f));
+    },
+    [workspace, uploadImage],
+  );
 
   const onPaste = useCallback(
     (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -309,8 +320,31 @@ export function ChatPanel({
             }
             disabled={!workspace || busy}
             rows={1}
-            className="block max-h-[200px] w-full resize-none overflow-y-auto rounded-xl bg-transparent px-3 py-2 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50 dark:text-slate-100 dark:placeholder:text-slate-500"
+            className="block max-h-[200px] w-full resize-none overflow-y-auto rounded-xl bg-transparent px-3 py-2 pl-10 pr-12 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none disabled:opacity-50 dark:text-slate-100 dark:placeholder:text-slate-500"
           />
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => {
+              onPickFiles(e.target.files);
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!workspace || busy}
+            aria-label="Attach image"
+            title="Attach image"
+            className="absolute bottom-1.5 left-2 inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
           <button
             type="submit"
             disabled={
@@ -320,7 +354,7 @@ export function ChatPanel({
               (!input.trim() && attachments.filter((a) => a.path && !a.error).length === 0)
             }
             aria-label={busy ? "Working" : "Send"}
-            className="absolute right-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+            className="absolute bottom-1.5 right-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
           >
             {busy ? (
               <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
